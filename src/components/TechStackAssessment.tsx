@@ -6,17 +6,87 @@ import { Badge } from "@/components/ui/badge";
 import { TechStackData } from "@/pages/Index";
 import { CheckCircle, ArrowRight, ArrowLeft, Factory, Database, Cpu, Settings } from "lucide-react";
 
+// Import logos
+import sapLogo from "@/assets/logos/sap-logo.png";
+import oracleLogo from "@/assets/logos/oracle-logo.png";
+import microsoftLogo from "@/assets/logos/microsoft-logo.png";
+import workdayLogo from "@/assets/logos/workday-logo.png";
+import netsuiteLogo from "@/assets/logos/netsuite-logo.png";
+import siemensLogo from "@/assets/logos/siemens-logo.png";
+import schneiderLogo from "@/assets/logos/schneider-logo.png";
+
 interface TechStackAssessmentProps {
   onComplete: (data: TechStackData) => void;
 }
 
+interface TechOption {
+  id: string;
+  name: string;
+  description: string;
+  logo?: string;
+  followUpQuestions?: {
+    id: string;
+    question: string;
+    options: { id: string; name: string }[];
+  }[];
+}
+
 const TECH_OPTIONS = {
   erp: [
-    { id: "sap", name: "SAP", description: "Enterprise Resource Planning" },
-    { id: "oracle", name: "Oracle ERP", description: "Cloud-based ERP solution" },
-    { id: "microsoft", name: "Microsoft Dynamics", description: "Business applications platform" },
-    { id: "workday", name: "Workday", description: "Financial & HR management" },
-    { id: "netsuite", name: "NetSuite", description: "Cloud business suite" },
+    { 
+      id: "sap", 
+      name: "SAP", 
+      description: "Enterprise Resource Planning",
+      logo: sapLogo,
+      followUpQuestions: [{
+        id: "sap_version",
+        question: "Which SAP system are you using?",
+        options: [
+          { id: "s4hana", name: "SAP S/4HANA" },
+          { id: "ecc", name: "SAP ECC" },
+          { id: "r3", name: "SAP R/3" },
+          { id: "bydesign", name: "SAP Business ByDesign" },
+          { id: "b1", name: "SAP Business One" },
+          { id: "successfactors", name: "SAP SuccessFactors" }
+        ]
+      }]
+    },
+    { 
+      id: "oracle", 
+      name: "Oracle ERP", 
+      description: "Cloud-based ERP solution",
+      logo: oracleLogo,
+      followUpQuestions: [{
+        id: "oracle_version",
+        question: "Which Oracle system are you using?",
+        options: [
+          { id: "cloud_erp", name: "Oracle Cloud ERP" },
+          { id: "ebusiness", name: "Oracle E-Business Suite" },
+          { id: "jdedwards", name: "JD Edwards" },
+          { id: "peoplesoft", name: "PeopleSoft" },
+          { id: "netsuite_oracle", name: "NetSuite (Oracle)" }
+        ]
+      }]
+    },
+    { 
+      id: "microsoft", 
+      name: "Microsoft Dynamics", 
+      description: "Business applications platform",
+      logo: microsoftLogo,
+      followUpQuestions: [{
+        id: "dynamics_version",
+        question: "Which Microsoft Dynamics system?",
+        options: [
+          { id: "dynamics_365", name: "Dynamics 365" },
+          { id: "dynamics_nav", name: "Dynamics NAV" },
+          { id: "dynamics_ax", name: "Dynamics AX" },
+          { id: "dynamics_gp", name: "Dynamics GP" },
+          { id: "dynamics_sl", name: "Dynamics SL" }
+        ]
+      }]
+    },
+    { id: "workday", name: "Workday", description: "Financial & HR management", logo: workdayLogo },
+    { id: "netsuite", name: "NetSuite", description: "Cloud business suite", logo: netsuiteLogo },
     { id: "other_erp", name: "Other ERP", description: "Custom or other ERP systems" },
   ],
   sensors: [
@@ -27,8 +97,40 @@ const TECH_OPTIONS = {
     { id: "safety_sensors", name: "Safety Sensors", description: "Gas detection, motion sensors" },
   ],
   automation: [
-    { id: "scada", name: "SCADA Systems", description: "Supervisory control and data acquisition" },
-    { id: "plc", name: "PLC Systems", description: "Programmable logic controllers" },
+    { 
+      id: "scada", 
+      name: "SCADA Systems", 
+      description: "Supervisory control and data acquisition",
+      followUpQuestions: [{
+        id: "scada_vendor",
+        question: "Which SCADA system vendor?",
+        options: [
+          { id: "wonderware", name: "AVEVA (Wonderware)" },
+          { id: "ge_ifix", name: "GE iFIX" },
+          { id: "rockwell", name: "Rockwell FactoryTalk" },
+          { id: "schneider_vijeo", name: "Schneider Electric Vijeo Citect" },
+          { id: "siemens_wincc", name: "Siemens WinCC" },
+          { id: "other_scada", name: "Other SCADA" }
+        ]
+      }]
+    },
+    { 
+      id: "plc", 
+      name: "PLC Systems", 
+      description: "Programmable logic controllers",
+      followUpQuestions: [{
+        id: "plc_vendor",
+        question: "Which PLC manufacturer?",
+        options: [
+          { id: "allen_bradley", name: "Allen-Bradley (Rockwell)" },
+          { id: "siemens_plc", name: "Siemens" },
+          { id: "schneider_plc", name: "Schneider Electric" },
+          { id: "mitsubishi", name: "Mitsubishi" },
+          { id: "omron", name: "Omron" },
+          { id: "abb_plc", name: "ABB" }
+        ]
+      }]
+    },
     { id: "dcs", name: "DCS", description: "Distributed control systems" },
     { id: "mes", name: "MES", description: "Manufacturing execution systems" },
     { id: "hmi", name: "HMI", description: "Human-machine interfaces" },
@@ -83,6 +185,8 @@ export const TechStackAssessment = ({ onComplete }: TechStackAssessmentProps) =>
   const [companySize, setCompanySize] = useState("");
   const [industry, setIndustry] = useState("");
   const [goals, setGoals] = useState<string[]>([]);
+  const [followUpAnswers, setFollowUpAnswers] = useState<Record<string, string>>({});
+  const [showFollowUp, setShowFollowUp] = useState<string | null>(null);
 
   const totalSteps = 7;
   const progress = ((currentStep + 1) / totalSteps) * 100;
@@ -123,7 +227,16 @@ export const TechStackAssessment = ({ onComplete }: TechStackAssessmentProps) =>
       companySize,
       industry,
       goals,
+      followUpAnswers,
     });
+  };
+
+  const handleFollowUpAnswer = (questionId: string, answer: string) => {
+    setFollowUpAnswers(prev => ({
+      ...prev,
+      [questionId]: answer
+    }));
+    setShowFollowUp(null);
   };
 
   const renderStepContent = () => {
@@ -139,6 +252,8 @@ export const TechStackAssessment = ({ onComplete }: TechStackAssessmentProps) =>
             options={TECH_OPTIONS.erp}
             selected={selectedTech.erp}
             onToggle={(tech) => toggleTechSelection("erp", tech)}
+            onShowFollowUp={setShowFollowUp}
+            followUpAnswers={followUpAnswers}
           />
         );
       case 1:
@@ -161,6 +276,8 @@ export const TechStackAssessment = ({ onComplete }: TechStackAssessmentProps) =>
             options={TECH_OPTIONS.automation}
             selected={selectedTech.automation}
             onToggle={(tech) => toggleTechSelection("automation", tech)}
+            onShowFollowUp={setShowFollowUp}
+            followUpAnswers={followUpAnswers}
           />
         );
       case 3:
@@ -240,6 +357,15 @@ export const TechStackAssessment = ({ onComplete }: TechStackAssessmentProps) =>
 
           {renderStepContent()}
 
+          {/* Follow-up Question Modal */}
+          {showFollowUp && (
+            <FollowUpModal
+              techId={showFollowUp}
+              onClose={() => setShowFollowUp(null)}
+              onAnswer={handleFollowUpAnswer}
+            />
+          )}
+
           <div className="flex items-center justify-between mt-8">
             <Button
               variant="outline"
@@ -281,12 +407,23 @@ interface TechSelectionStepProps {
   title: string;
   description: string;
   icon: React.ElementType;
-  options: { id: string; name: string; description: string }[];
+  options: TechOption[];
   selected: string[];
   onToggle: (id: string) => void;
+  onShowFollowUp?: (techId: string) => void;
+  followUpAnswers?: Record<string, string>;
 }
 
-const TechSelectionStep = ({ title, description, icon: Icon, options, selected, onToggle }: TechSelectionStepProps) => (
+const TechSelectionStep = ({ 
+  title, 
+  description, 
+  icon: Icon, 
+  options, 
+  selected, 
+  onToggle, 
+  onShowFollowUp,
+  followUpAnswers 
+}: TechSelectionStepProps) => (
   <div className="space-y-6">
     <div className="text-center">
       <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-primary rounded-full mb-4">
@@ -307,14 +444,45 @@ const TechSelectionStep = ({ title, description, icon: Icon, options, selected, 
           }`}
           onClick={() => onToggle(option.id)}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold mb-1">{option.name}</h4>
-              <p className="text-sm text-muted-foreground">{option.description}</p>
-            </div>
-            {selected.includes(option.id) && (
-              <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
+          <div className="flex items-start gap-3">
+            {option.logo && (
+              <img 
+                src={option.logo} 
+                alt={`${option.name} logo`}
+                className="w-8 h-8 object-contain flex-shrink-0 mt-1"
+              />
             )}
+            <div className="flex-1">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="font-semibold mb-1">{option.name}</h4>
+                  <p className="text-sm text-muted-foreground">{option.description}</p>
+                  {option.followUpQuestions && selected.includes(option.id) && followUpAnswers?.[option.followUpQuestions[0].id] && (
+                    <Badge variant="secondary" className="mt-2 text-xs">
+                      {followUpAnswers[option.followUpQuestions[0].id]}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {option.followUpQuestions && selected.includes(option.id) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onShowFollowUp?.(option.id);
+                      }}
+                      className="text-xs px-2 py-1 h-auto"
+                    >
+                      Details
+                    </Button>
+                  )}
+                  {selected.includes(option.id) && (
+                    <CheckCircle className="w-6 h-6 text-primary flex-shrink-0" />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
       ))}
@@ -397,3 +565,47 @@ const MultiSelectStep = ({ title, description, options, selected, onToggle }: Mu
     </div>
   </div>
 );
+
+const FollowUpModal = ({ 
+  techId, 
+  onClose, 
+  onAnswer 
+}: { 
+  techId: string; 
+  onClose: () => void; 
+  onAnswer: (questionId: string, answer: string) => void; 
+}) => {
+  // Find the tech option and its follow-up questions
+  const allOptions = [...TECH_OPTIONS.erp, ...TECH_OPTIONS.automation];
+  const techOption = allOptions.find(option => option.id === techId);
+  const followUpQuestion = techOption?.followUpQuestions?.[0];
+
+  if (!followUpQuestion) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="max-w-md w-full p-6 bg-gradient-card">
+        <h3 className="text-xl font-bold mb-4">{followUpQuestion.question}</h3>
+        <div className="space-y-3">
+          {followUpQuestion.options.map((option) => (
+            <Button
+              key={option.id}
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => onAnswer(followUpQuestion.id, option.name)}
+            >
+              {option.name}
+            </Button>
+          ))}
+        </div>
+        <Button
+          variant="ghost"
+          onClick={onClose}
+          className="w-full mt-4"
+        >
+          Skip
+        </Button>
+      </Card>
+    </div>
+  );
+};

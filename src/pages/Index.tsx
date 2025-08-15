@@ -10,6 +10,7 @@ export interface TechStackData {
   companySize: string;
   industry: string;
   goals: string[];
+  followUpAnswers?: Record<string, string>;
 }
 
 const Index = () => {
