@@ -54,22 +54,42 @@ const Admin = () => {
 
   const handleSaveDraft = () => {
     if (!config) return;
-    ConfigService.saveDraft(config);
-    setIsDraft(true);
-    toast({
-      title: "Draft Saved",
-      description: "Your changes have been saved as a draft."
-    });
+    try {
+      ConfigService.saveDraft(config);
+      setIsDraft(true);
+      toast({
+        title: "Draft Saved",
+        description: "Your changes have been saved as a draft."
+      });
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+      toast({
+        title: "Save Failed",
+        description: error instanceof Error ? error.message : "Failed to save draft. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handlePublish = () => {
     if (!config) return;
-    ConfigService.publish(config);
-    setIsDraft(false);
-    toast({
-      title: "Published",
-      description: "Your changes are now live on the public site."
-    });
+    try {
+      console.log('🚀 Starting publish process...');
+      ConfigService.publish(config);
+      setIsDraft(false);
+      toast({
+        title: "Published Successfully",
+        description: "Your changes are now live on the public site. Changes should appear immediately."
+      });
+      console.log('✅ Publish completed successfully');
+    } catch (error) {
+      console.error('❌ Failed to publish:', error);
+      toast({
+        title: "Publish Failed",
+        description: error instanceof Error ? error.message : "Failed to publish. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCreateDraft = () => {

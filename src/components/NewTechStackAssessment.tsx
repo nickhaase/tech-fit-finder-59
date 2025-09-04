@@ -47,6 +47,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   const [mode, setMode] = useState<'quick' | 'advanced'>('quick');
   const [config, setConfig] = useState<AppConfig>(() => ConfigService.getLive());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const { toast } = useToast();
 
   // Debug function to log config state
@@ -94,12 +95,50 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
     }
   };
 
+  // Debug localStorage function
+  const debugLocalStorage = () => {
+    console.log('🔍 === localStorage Debug Info ===');
+    try {
+      const liveConfig = localStorage.getItem('mx_config_live');
+      const draftConfig = localStorage.getItem('mx_config_draft');
+      const versions = localStorage.getItem('mx_config_versions');
+      
+      console.log('📦 Raw localStorage contents:');
+      console.log('  mx_config_live:', liveConfig ? `${Math.round(liveConfig.length / 1024)}KB` : 'MISSING');
+      console.log('  mx_config_draft:', draftConfig ? `${Math.round(draftConfig.length / 1024)}KB` : 'MISSING');
+      console.log('  mx_config_versions:', versions ? `${Math.round(versions.length / 1024)}KB` : 'MISSING');
+      
+      if (liveConfig) {
+        try {
+          const parsed = JSON.parse(liveConfig);
+          console.log('📋 Parsed live config:');
+          console.log('  Sections:', parsed.sections?.length || 0);
+          console.log('  Status:', parsed.status);
+          console.log('  Updated:', parsed.updatedAt);
+          console.log('  Total brands:', parsed.sections?.reduce((acc: number, s: any) => 
+            acc + (s.options?.length || 0) + 
+            (s.subcategories?.reduce((sub: number, cat: any) => sub + (cat.options?.length || 0), 0) || 0), 0));
+          console.log('  Total logos:', parsed.sections?.reduce((acc: number, s: any) => 
+            acc + (s.options?.filter((o: any) => o.logo)?.length || 0) + 
+            (s.subcategories?.reduce((sub: number, cat: any) => 
+              sub + (cat.options?.filter((o: any) => o.logo)?.length || 0), 0) || 0), 0));
+        } catch (e) {
+          console.error('❌ Failed to parse live config:', e);
+        }
+      }
+    } catch (error) {
+      console.error('❌ localStorage debug failed:', error);
+    }
+    console.log('🔍 === End Debug Info ===');
+  };
+
   // Manual refresh function
   const refreshConfig = async () => {
     setIsRefreshing(true);
     try {
       const newConfig = ConfigService.getLive();
       setConfig(newConfig);
+      setLastRefresh(Date.now());
       debugConfig();
       toast({
         title: "Configuration refreshed",
@@ -951,13 +990,15 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
                 size="sm"
                 onClick={() => {
                   console.log('🐛 Manual debug triggered');
+                  debugLocalStorage();
                   debugConfig();
                   // Force reload from localStorage
                   const freshConfig = ConfigService.getLive();
                   setConfig(freshConfig);
+                  setLastRefresh(Date.now());
                 }}
                 className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-                title="Debug configuration and force reload"
+                title="Debug configuration and localStorage"
               >
                 <Bug className="w-4 h-4" />
                 Debug

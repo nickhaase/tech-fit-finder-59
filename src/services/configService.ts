@@ -174,50 +174,103 @@ export class ConfigService {
   }
 
   static saveDraft(config: AppConfig): void {
-    config.status = 'draft';
-    config.updatedAt = new Date().toISOString();
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(config));
+    try {
+      config.status = 'draft';
+      config.updatedAt = new Date().toISOString();
+      
+      const configString = JSON.stringify(config);
+      console.log('💾 Saving draft:', {
+        size: Math.round(configString.length / 1024) + 'KB',
+        totalBrands: config.sections.reduce((acc, s) => 
+          acc + (s.options?.length || 0) + 
+          (s.subcategories?.reduce((sub, cat) => sub + (cat.options?.length || 0), 0) || 0), 0),
+        totalLogos: config.sections.reduce((acc, s) => 
+          acc + (s.options?.filter(o => o.logo)?.length || 0) + 
+          (s.subcategories?.reduce((sub, cat) => 
+            sub + (cat.options?.filter(o => o.logo)?.length || 0), 0) || 0), 0)
+      });
+      
+      localStorage.setItem(DRAFT_KEY, configString);
+      console.log('✅ Draft saved successfully');
+    } catch (error) {
+      console.error('❌ Failed to save draft:', error);
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        throw new Error('Storage quota exceeded. Try reducing image sizes or removing unused logos.');
+      }
+      throw error;
+    }
   }
 
   static publish(config?: AppConfig): void {
+    console.log('📢 Publishing config...');
     const toPublish = config || this.getDraft();
     if (!toPublish) {
+      console.error('❌ No config to publish');
       throw new Error('No draft config to publish');
     }
 
-    // Save current live as version
-    const current = this.getLive();
-    this.saveVersion(current, 'Pre-publish backup');
+    try {
+      // Save current live as version
+      const current = this.getLive();
+      this.saveVersion(current, 'Pre-publish backup');
 
-    // Publish new config
-    toPublish.status = 'published';
-    toPublish.updatedAt = new Date().toISOString();
-    
-    console.log('🚀 Publishing config with logos:', {
-      sectionsCount: toPublish.sections.length,
-      totalLogos: toPublish.sections.reduce((acc, s) => 
-        acc + s.options.filter(o => o.logo).length + 
-        (s.subcategories?.reduce((sub, cat) => sub + cat.options.filter(o => o.logo).length, 0) || 0), 0
-      ),
-      timestamp: toPublish.updatedAt
-    });
-    
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(toPublish));
-    localStorage.removeItem(DRAFT_KEY);
-    
-    // Trigger custom event for same-window updates
-    window.dispatchEvent(new CustomEvent('configUpdated', { 
-      detail: { 
-        action: 'published', 
-        timestamp: toPublish.updatedAt,
-        logoCount: toPublish.sections.reduce((acc, s) => 
-          acc + s.options.filter(o => o.logo).length + 
-          (s.subcategories?.reduce((sub, cat) => sub + cat.options.filter(o => o.logo).length, 0) || 0), 0
-        )
-      } 
-    }));
-    
-    console.log('✅ Config published and event dispatched');
+      // Publish new config
+      toPublish.status = 'published';
+      toPublish.updatedAt = new Date().toISOString();
+      
+      const configString = JSON.stringify(toPublish);
+      console.log('📤 Publishing config:', {
+        size: Math.round(configString.length / 1024) + 'KB',
+        status: toPublish.status,
+        updatedAt: toPublish.updatedAt,
+        totalBrands: toPublish.sections.reduce((acc, s) => 
+          acc + (s.options?.length || 0) + 
+          (s.subcategories?.reduce((sub, cat) => sub + (cat.options?.length || 0), 0) || 0), 0),
+        totalLogos: toPublish.sections.reduce((acc, s) => 
+          acc + (s.options?.filter(o => o.logo)?.length || 0) + 
+          (s.subcategories?.reduce((sub, cat) => 
+            sub + (cat.options?.filter(o => o.logo)?.length || 0), 0) || 0), 0)
+      });
+      
+      localStorage.setItem(CONFIG_KEY, configString);
+      console.log('✅ Config published to localStorage successfully');
+
+      localStorage.removeItem(DRAFT_KEY);
+      console.log('🗑️ Draft removed');
+      
+      // Trigger custom event for same-window updates
+      window.dispatchEvent(new CustomEvent('configUpdated', { 
+        detail: { 
+          action: 'published', 
+          timestamp: toPublish.updatedAt,
+          logoCount: toPublish.sections.reduce((acc, s) => 
+            acc + (s.options?.filter(o => o.logo)?.length || 0) + 
+            (s.subcategories?.reduce((sub, cat) => 
+              sub + (cat.options?.filter(o => o.logo)?.length || 0), 0) || 0), 0)
+        } 
+      }));
+      console.log('📡 Config update event dispatched');
+      
+      // Force immediate refresh of any listening components
+      this.notifyConfigChange();
+      
+    } catch (error) {
+      console.error('❌ Failed to publish config:', error);
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        throw new Error('Storage quota exceeded. Try reducing image sizes or removing unused logos.');
+      }
+      throw error;
+    }
+  }
+
+  // New method to force config refresh across all components
+  static notifyConfigChange(): void {
+    // Use a small delay to ensure storage write is complete
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('forceConfigRefresh', { 
+        detail: { timestamp: Date.now() }
+      }));
+    }, 100);
   }
 
   static saveVersion(config: AppConfig, description?: string): void {
