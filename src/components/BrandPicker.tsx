@@ -5,14 +5,31 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Search, X } from "lucide-react";
 import { BrandOption, CategoryOption } from "@/types/assessment";
+import { ConfigSection } from "@/types/config";
 
 interface BrandPickerProps {
-  category: CategoryOption;
+  category: CategoryOption | ConfigSection;
   selectedBrands: string[];
   onBrandToggle: (brandId: string, brandName: string) => void;
   onClose: () => void;
   allowMultiple?: boolean;
 }
+
+// Helper to convert ConfigSection to CategoryOption format
+const convertConfigToCategory = (config: ConfigSection): CategoryOption => {
+  return {
+    id: config.id,
+    name: config.label,
+    description: config.description || '',
+    brands: config.options.filter(opt => opt.state === 'active').map(opt => ({
+      id: opt.id,
+      name: opt.name,
+      logo: opt.logo,
+      commonNames: opt.synonyms,
+      description: ''
+    }))
+  };
+};
 
 export const BrandPicker = ({ 
   category, 
@@ -24,16 +41,19 @@ export const BrandPicker = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [customBrand, setCustomBrand] = useState("");
 
+  // Convert category to consistent format
+  const categoryData = 'options' in category ? convertConfigToCategory(category) : category;
+
   const filteredBrands = useMemo(() => {
-    if (!searchTerm) return category.brands;
+    if (!searchTerm) return categoryData.brands;
     
-    return category.brands.filter(brand => 
+    return categoryData.brands.filter(brand => 
       brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       brand.commonNames?.some(name => 
         name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
-  }, [category.brands, searchTerm]);
+  }, [categoryData.brands, searchTerm]);
 
   const handleBrandSelect = (brand: BrandOption) => {
     onBrandToggle(brand.id, brand.name);
@@ -69,8 +89,8 @@ export const BrandPicker = ({
         <div className="p-6 border-b border-border/50">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h3 className="text-xl font-bold mb-2">{category.name}</h3>
-              <p className="text-sm text-muted-foreground">{category.description}</p>
+              <h3 className="text-xl font-bold mb-2">{categoryData.name}</h3>
+              <p className="text-sm text-muted-foreground">{categoryData.description}</p>
             </div>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="w-4 h-4" />

@@ -26,11 +26,9 @@ import {
 import { BrandPicker } from "@/components/BrandPicker";
 import { FollowUpQuestions } from "@/components/FollowUpQuestions";
 import { AssessmentData, IntegrationDetail, SensorIntegration, AutomationIntegration, OtherSystemIntegration } from "@/types/assessment";
+import { ConfigService } from "@/services/configService";
+import { AppConfig } from "@/types/config";
 import { 
-  ERP_SYSTEMS, 
-  SENSOR_CATEGORIES,
-  AUTOMATION_CATEGORIES,
-  OTHER_SYSTEM_CATEGORIES,
   COMPANY_SIZES,
   INDUSTRIES,
   GOALS,
@@ -44,6 +42,7 @@ interface NewTechStackAssessmentProps {
 export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [mode, setMode] = useState<'quick' | 'advanced'>('quick');
+  const [config] = useState<AppConfig>(() => ConfigService.getLive());
   
   // Assessment state
   const [erp, setErp] = useState<IntegrationDetail | null>(null);
@@ -357,7 +356,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
             <div className="grid md:grid-cols-1 gap-4">
               <Card
                 className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft border-dashed"
-                onClick={() => handleBrandSelection(ERP_SYSTEMS[0], 'erp')}
+                onClick={() => handleBrandSelection(config.sections.find(s => s.id === 'erp'), 'erp')}
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -390,20 +389,20 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
             </div>
             
             <div className="grid md:grid-cols-2 gap-4">
-              {SENSOR_CATEGORIES.map((category) => (
+              {config.sections.find(s => s.id === 'sensors_monitoring')?.subcategories?.map((category) => (
                 <Card
                   key={category.id}
                   className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
-                  onClick={() => handleBrandSelection(category, 'sensors', category.name)}
+                  onClick={() => handleBrandSelection(category, 'sensors', category.label)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold mb-1">{category.name}</h4>
+                      <h4 className="font-semibold mb-1">{category.label}</h4>
                       <p className="text-sm text-muted-foreground">{category.description}</p>
-                      {sensorsMonitoring.filter(s => s.category === category.name).length > 0 && (
+                      {sensorsMonitoring.filter(s => s.category === category.label).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {sensorsMonitoring
-                            .filter(s => s.category === category.name)
+                            .filter(s => s.category === category.label)
                             .slice(0, 3)
                             .map((sensor, idx) => (
                               <Badge key={idx} variant="secondary" className="text-xs">
@@ -433,20 +432,20 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
             </div>
             
             <div className="grid md:grid-cols-2 gap-4">
-              {AUTOMATION_CATEGORIES.map((category) => (
+              {config.sections.find(s => s.id === 'automation_scada')?.subcategories?.map((category) => (
                 <Card
                   key={category.id}
                   className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
-                  onClick={() => handleBrandSelection(category, 'automation', category.name)}
+                  onClick={() => handleBrandSelection(category, 'automation', category.label)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold mb-1">{category.name}</h4>
+                      <h4 className="font-semibold mb-1">{category.label}</h4>
                       <p className="text-sm text-muted-foreground">{category.description}</p>
-                      {automationScada.filter(a => a.type === category.name).length > 0 && (
+                      {automationScada.filter(a => a.type === category.label).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {automationScada
-                            .filter(a => a.type === category.name)
+                            .filter(a => a.type === category.label)
                             .slice(0, 3)
                             .map((automation, idx) => (
                               <Badge key={idx} variant="secondary" className="text-xs">
@@ -476,20 +475,20 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
             </div>
             
             <div className="grid md:grid-cols-2 gap-4">
-              {OTHER_SYSTEM_CATEGORIES.map((category) => (
+              {config.sections.find(s => s.id === 'other_systems')?.subcategories?.map((category) => (
                 <Card
                   key={category.id}
                   className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
-                  onClick={() => handleBrandSelection(category, 'other', category.name)}
+                  onClick={() => handleBrandSelection(category, 'other', category.label)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold mb-1">{category.name}</h4>
+                      <h4 className="font-semibold mb-1">{category.label}</h4>
                       <p className="text-sm text-muted-foreground">{category.description}</p>
-                      {otherSystems.filter(o => o.type === category.name).length > 0 && (
+                      {otherSystems.filter(o => o.type === category.label).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {otherSystems
-                            .filter(o => o.type === category.name)
+                            .filter(o => o.type === category.label)
                             .slice(0, 3)
                             .map((other, idx) => (
                               <Badge key={idx} variant="secondary" className="text-xs">
