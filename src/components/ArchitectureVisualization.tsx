@@ -1,4 +1,4 @@
-import { TechStackData } from "@/pages/Index";
+import { AssessmentData } from "@/types/assessment";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 interface ArchitectureVisualizationProps {
-  data: TechStackData;
+  data: AssessmentData;
 }
 
 export const ArchitectureVisualization = ({ data }: ArchitectureVisualizationProps) => {
@@ -22,28 +22,28 @@ export const ArchitectureVisualization = ({ data }: ArchitectureVisualizationPro
     {
       title: "ERP Systems",
       icon: Database,
-      items: data.erp,
+      items: data.integrations.erp ? [data.integrations.erp.brand] : [],
       color: "bg-blue-500",
       description: "Enterprise resource planning and business data"
     },
     {
-      title: "Sensors & Monitoring",
+      title: "Sensors & Monitoring", 
       icon: Cpu,
-      items: data.sensors,
+      items: data.integrations.sensorsMonitoring.map(s => s.brand),
       color: "bg-green-500",
       description: "Real-time equipment and environmental data"
     },
     {
       title: "Automation & SCADA",
       icon: Settings,
-      items: data.automation,
-      color: "bg-purple-500",
+      items: data.integrations.automationScada.map(a => a.brand),
+      color: "bg-purple-500", 
       description: "Process control and automation systems"
     },
     {
       title: "Other Systems",
       icon: Factory,
-      items: data.other,
+      items: data.integrations.otherSystems.map(o => o.brand),
       color: "bg-orange-500",
       description: "Legacy and specialized maintenance tools"
     }
@@ -110,7 +110,7 @@ export const ArchitectureVisualization = ({ data }: ArchitectureVisualizationPro
               Centralized Maintenance Management Platform
             </p>
             <div className="text-sm opacity-75">
-              Integrates with {data.erp.length + data.sensors.length + data.automation.length + data.other.length} systems
+              Integrates with {data.scorecard.integrationsFound} systems
             </div>
           </Card>
         </div>

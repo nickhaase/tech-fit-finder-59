@@ -1,38 +1,28 @@
 import { useState } from "react";
-import { TechStackAssessment } from "@/components/TechStackAssessment";
+import { NewTechStackAssessment } from "@/components/NewTechStackAssessment";
 import { AssessmentResults } from "@/components/AssessmentResults";
-
-export interface TechStackData {
-  erp: string[];
-  sensors: string[];
-  automation: string[];
-  other: string[];
-  companySize: string;
-  industry: string;
-  goals: string[];
-  followUpAnswers?: Record<string, string>;
-}
+import { AssessmentData } from "@/types/assessment";
 
 const Index = () => {
   const [showResults, setShowResults] = useState(false);
-  const [techStackData, setTechStackData] = useState<TechStackData | null>(null);
+  const [assessmentData, setAssessmentData] = useState<AssessmentData | null>(null);
 
-  const handleAssessmentComplete = (data: TechStackData) => {
-    setTechStackData(data);
+  const handleAssessmentComplete = (data: AssessmentData) => {
+    setAssessmentData(data);
     setShowResults(true);
   };
 
   const handleRestart = () => {
     setShowResults(false);
-    setTechStackData(null);
+    setAssessmentData(null);
   };
 
   return (
     <div className="min-h-screen bg-background">
       {!showResults ? (
-        <TechStackAssessment onComplete={handleAssessmentComplete} />
+        <NewTechStackAssessment onComplete={handleAssessmentComplete} />
       ) : (
-        <AssessmentResults data={techStackData!} onRestart={handleRestart} />
+        <AssessmentResults data={assessmentData!} onRestart={handleRestart} />
       )}
     </div>
   );

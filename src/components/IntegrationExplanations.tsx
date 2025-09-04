@@ -1,4 +1,4 @@
-import { TechStackData } from "@/pages/Index";
+import { AssessmentData } from "@/types/assessment";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 interface IntegrationExplanationsProps {
-  data: TechStackData;
+  data: AssessmentData;
 }
 
 const INTEGRATION_DETAILS = {
@@ -139,7 +139,12 @@ const GOAL_EXPLANATIONS = {
 };
 
 export const IntegrationExplanations = ({ data }: IntegrationExplanationsProps) => {
-  const allTech = [...data.erp, ...data.sensors, ...data.automation, ...data.other];
+  const allTech = [
+    ...(data.integrations.erp ? [data.integrations.erp.brand] : []),
+    ...data.integrations.sensorsMonitoring.map(s => s.brand),
+    ...data.integrations.automationScada.map(a => a.brand), 
+    ...data.integrations.otherSystems.map(o => o.brand)
+  ];
   const availableIntegrations = allTech.filter(tech => tech in INTEGRATION_DETAILS);
 
   return (

@@ -1,18 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TechStackData } from "@/pages/Index";
+import { AssessmentData } from "@/types/assessment";
 import { ArchitectureVisualization } from "@/components/ArchitectureVisualization";
 import { IntegrationExplanations } from "@/components/IntegrationExplanations";
 import { CheckCircle, RefreshCw, Download, Share2 } from "lucide-react";
 
 interface AssessmentResultsProps {
-  data: TechStackData;
+  data: AssessmentData;
   onRestart: () => void;
 }
 
 export const AssessmentResults = ({ data, onRestart }: AssessmentResultsProps) => {
-  const totalIntegrations = data.erp.length + data.sensors.length + data.automation.length + data.other.length;
+  const totalIntegrations = data.scorecard.integrationsFound;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 py-12">
@@ -65,49 +65,47 @@ export const AssessmentResults = ({ data, onRestart }: AssessmentResultsProps) =
         <Card className="p-8 mb-8 bg-gradient-card shadow-card border-0">
           <h2 className="text-2xl font-bold mb-6">Your Technology Ecosystem</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {data.erp.length > 0 && (
+            {data.integrations.erp && (
               <div>
                 <h3 className="font-semibold mb-3 text-primary">ERP Systems</h3>
                 <div className="space-y-2">
-                  {data.erp.map((tech) => (
-                    <Badge key={tech} variant="secondary" className="block w-fit">
-                      {tech.replace('_', ' ').toUpperCase()}
-                    </Badge>
-                  ))}
+                  <Badge variant="secondary" className="block w-fit">
+                    {data.integrations.erp.brand}
+                  </Badge>
                 </div>
               </div>
             )}
-            {data.sensors.length > 0 && (
+            {data.integrations.sensorsMonitoring.length > 0 && (
               <div>
                 <h3 className="font-semibold mb-3 text-primary">Sensors & Monitoring</h3>
                 <div className="space-y-2">
-                  {data.sensors.map((tech) => (
-                    <Badge key={tech} variant="secondary" className="block w-fit">
-                      {tech.replace('_', ' ').toUpperCase()}
+                  {data.integrations.sensorsMonitoring.map((sensor, idx) => (
+                    <Badge key={idx} variant="secondary" className="block w-fit">
+                      {sensor.brand}
                     </Badge>
                   ))}
                 </div>
               </div>
             )}
-            {data.automation.length > 0 && (
+            {data.integrations.automationScada.length > 0 && (
               <div>
                 <h3 className="font-semibold mb-3 text-primary">Automation & SCADA</h3>
                 <div className="space-y-2">
-                  {data.automation.map((tech) => (
-                    <Badge key={tech} variant="secondary" className="block w-fit">
-                      {tech.replace('_', ' ').toUpperCase()}
+                  {data.integrations.automationScada.map((automation, idx) => (
+                    <Badge key={idx} variant="secondary" className="block w-fit">
+                      {automation.brand}
                     </Badge>
                   ))}
                 </div>
               </div>
             )}
-            {data.other.length > 0 && (
+            {data.integrations.otherSystems.length > 0 && (
               <div>
                 <h3 className="font-semibold mb-3 text-primary">Other Systems</h3>
                 <div className="space-y-2">
-                  {data.other.map((tech) => (
-                    <Badge key={tech} variant="secondary" className="block w-fit">
-                      {tech.replace('_', ' ').toUpperCase()}
+                  {data.integrations.otherSystems.map((other, idx) => (
+                    <Badge key={idx} variant="secondary" className="block w-fit">
+                      {other.brand}
                     </Badge>
                   ))}
                 </div>
