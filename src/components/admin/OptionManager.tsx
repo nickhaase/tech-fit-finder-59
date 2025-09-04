@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfigSection, BrandOption } from '@/types/config';
-import { Plus, Edit, Trash2, Upload, Image } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { compressImage } from '@/utils/imageUtils';
 
 interface OptionManagerProps {
   section: ConfigSection;
@@ -85,18 +86,39 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
     });
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && editingOption) {
-      // In a real app, this would upload to a storage service
-      const reader = new FileReader();
-      reader.onload = (e) => {
+      try {
+        // Check file size (limit to 2MB before compression)
+        if (file.size > 2 * 1024 * 1024) {
+          toast({
+            title: "File Too Large",
+            description: "Please select an image smaller than 2MB.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const compressedImage = await compressImage(file);
         setEditingOption({
           ...editingOption,
-          logo: e.target?.result as string
+          logo: compressedImage
         });
-      };
-      reader.readAsDataURL(file);
+        
+        toast({
+          title: "Image Uploaded",
+          description: "Image has been compressed and optimized for storage."
+        });
+      } catch (error) {
+        console.error('Image upload failed:', error);
+        toast({
+          title: "Upload Failed",
+          description: "Failed to process the image. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -156,7 +178,7 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
                     />
                   ) : (
                     <div className="w-8 h-8 bg-muted rounded flex items-center justify-center">
-                      <Image className="w-4 h-4 text-muted-foreground" />
+                      <ImageIcon className="w-4 h-4 text-muted-foreground" />
                     </div>
                   )}
                   <div>

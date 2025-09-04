@@ -17,6 +17,7 @@ const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [isDraft, setIsDraft] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -44,6 +45,25 @@ const Admin = () => {
     } else {
       setConfig(ConfigService.getLive());
       setIsDraft(false);
+    }
+  };
+
+  // Auto-save when config changes
+  const handleConfigChange = (newConfig: AppConfig) => {
+    setConfig(newConfig);
+    if (autoSaveEnabled) {
+      try {
+        ConfigService.saveDraft(newConfig);
+        setIsDraft(true);
+        console.log('🔄 Auto-saved draft');
+      } catch (error) {
+        console.error('❌ Auto-save failed:', error);
+        toast({
+          title: "Auto-save Failed",
+          description: "Changes weren't saved automatically. Please save manually.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -168,6 +188,9 @@ const Admin = () => {
             <Badge variant={isDraft ? "secondary" : "default"}>
               {isDraft ? "Draft" : "Published"}
             </Badge>
+            <Badge variant={autoSaveEnabled ? "default" : "outline"} className="text-xs">
+              Auto-save: {autoSaveEnabled ? "ON" : "OFF"}
+            </Badge>
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Export
@@ -245,15 +268,15 @@ const Admin = () => {
           </TabsList>
 
           <TabsContent value="sections">
-            <SectionManager config={config} onConfigChange={setConfig} />
+            <SectionManager config={config} onConfigChange={handleConfigChange} />
           </TabsContent>
 
           <TabsContent value="synonyms">
-            <SynonymManager config={config} onConfigChange={setConfig} />
+            <SynonymManager config={config} onConfigChange={handleConfigChange} />
           </TabsContent>
 
           <TabsContent value="bulk">
-            <BulkImport config={config} onConfigChange={setConfig} />
+            <BulkImport config={config} onConfigChange={handleConfigChange} />
           </TabsContent>
 
           <TabsContent value="versions">
