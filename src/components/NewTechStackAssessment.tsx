@@ -22,7 +22,8 @@ import {
   Target,
   Building,
   Shield,
-  RefreshCw
+  RefreshCw,
+  Bug
 } from "lucide-react";
 
 import { BrandPicker } from "@/components/BrandPicker";
@@ -60,6 +61,15 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       )
     });
     
+    // Log localStorage state
+    const liveConfig = localStorage.getItem('mx_config_live');
+    const draftConfig = localStorage.getItem('mx_config_draft');
+    console.log('🗄️ localStorage state:', {
+      hasLive: !!liveConfig,
+      hasDraft: !!draftConfig,
+      liveSize: liveConfig ? `${Math.round(liveConfig.length / 1024)}KB` : '0KB'
+    });
+    
     // Log a sample of logos found
     const allLogos: string[] = [];
     config.sections.forEach(section => {
@@ -73,6 +83,15 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       });
     });
     console.log('🖼️ Found logos:', allLogos.slice(0, 5));
+    
+    // Debug first few brands in ERP section
+    if (config.sections[0]?.options?.length > 0) {
+      console.log('🏢 ERP section sample:', config.sections[0].options.slice(0, 3).map(opt => ({
+        name: opt.name,
+        hasLogo: !!opt.logo,
+        logoPath: opt.logo
+      })));
+    }
   };
 
   // Manual refresh function
@@ -925,6 +944,23 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Loading...' : 'Refresh'}
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  console.log('🐛 Manual debug triggered');
+                  debugConfig();
+                  // Force reload from localStorage
+                  const freshConfig = ConfigService.getLive();
+                  setConfig(freshConfig);
+                }}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                title="Debug configuration and force reload"
+              >
+                <Bug className="w-4 h-4" />
+                Debug
               </Button>
             </div>
 

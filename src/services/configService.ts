@@ -113,15 +113,51 @@ const createDefaultConfig = (): AppConfig => {
 
 export class ConfigService {
   static getLive(): AppConfig {
+    console.log('🔍 ConfigService.getLive() called');
+    
     const stored = localStorage.getItem(CONFIG_KEY);
+    console.log('📦 Raw localStorage data:', stored ? 'EXISTS' : 'MISSING');
+    
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        console.log('✅ Successfully parsed stored config:', {
+          sectionsCount: parsed.sections?.length || 0,
+          status: parsed.status,
+          updatedAt: parsed.updatedAt,
+          totalBrands: parsed.sections?.reduce((acc: number, s: any) => 
+            acc + (s.options?.length || 0) + 
+            (s.subcategories?.reduce((sub: number, cat: any) => sub + (cat.options?.length || 0), 0) || 0), 0
+          ),
+          totalLogos: parsed.sections?.reduce((acc: number, s: any) => 
+            acc + (s.options?.filter((o: any) => o.logo)?.length || 0) + 
+            (s.subcategories?.reduce((sub: number, cat: any) => 
+              sub + (cat.options?.filter((o: any) => o.logo)?.length || 0), 0) || 0), 0
+          )
+        });
+        return parsed;
       } catch (e) {
-        console.warn('Failed to parse stored config, using default');
+        console.error('❌ Failed to parse stored config:', e);
+        console.log('🗂️ Creating default config as fallback');
       }
+    } else {
+      console.log('📂 No stored config found, creating default');
     }
-    return createDefaultConfig();
+    
+    const defaultConfig = createDefaultConfig();
+    console.log('🏭 Created default config:', {
+      sectionsCount: defaultConfig.sections.length,
+      totalBrands: defaultConfig.sections.reduce((acc, s) => 
+        acc + s.options.length + 
+        (s.subcategories?.reduce((sub, cat) => sub + cat.options.length, 0) || 0), 0
+      ),
+      totalLogos: defaultConfig.sections.reduce((acc, s) => 
+        acc + s.options.filter(o => o.logo).length + 
+        (s.subcategories?.reduce((sub, cat) => sub + cat.options.filter(o => o.logo).length, 0) || 0), 0
+      )
+    });
+    
+    return defaultConfig;
   }
 
   static getDraft(): AppConfig | null {
