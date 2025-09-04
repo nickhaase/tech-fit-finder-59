@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { TechStackData } from "@/pages/Index";
+import { AssessmentData } from "@/types/assessment";
 import { CheckCircle, ArrowRight, ArrowLeft, Factory, Database, Cpu, Settings } from "lucide-react";
 
 // Import logos
@@ -16,7 +16,7 @@ import siemensLogo from "@/assets/logos/siemens-logo.png";
 import schneiderLogo from "@/assets/logos/schneider-logo.png";
 
 interface TechStackAssessmentProps {
-  onComplete: (data: TechStackData) => void;
+  onComplete: (data: AssessmentData) => void;
 }
 
 interface TechOption {
@@ -222,13 +222,44 @@ export const TechStackAssessment = ({ onComplete }: TechStackAssessmentProps) =>
   };
 
   const handleComplete = () => {
-    onComplete({
-      ...selectedTech,
-      companySize,
-      industry,
-      goals,
-      followUpAnswers,
-    });
+    const assessmentData: AssessmentData = {
+      mode: 'quick',
+      company: {
+        size: companySize as 'startup' | 'small' | 'medium' | 'enterprise',
+        industry: industry
+      },
+      goals: goals,
+      integrations: {
+        sensorsMonitoring: selectedTech.sensors.map(sensor => ({
+          brand: sensor,
+          category: 'IoT Sensors' as const
+        })),
+        automationScada: selectedTech.automation.map(automation => ({
+          brand: automation,
+          type: 'SCADA' as const
+        })),
+        otherSystems: selectedTech.other.map(other => ({
+          brand: other,
+          type: 'Legacy CMMS/EAM' as const
+        }))
+      },
+      integrationPatterns: [],
+      scorecard: {
+        compatibilityPercent: 95,
+        integrationsFound: selectedTech.erp.length + selectedTech.sensors.length + selectedTech.automation.length + selectedTech.other.length,
+        goalsMatched: goals.length,
+        complexity: 'Medium' as const
+      }
+    };
+
+    // Add ERP integration if selected
+    if (selectedTech.erp.length > 0) {
+      assessmentData.integrations.erp = {
+        brand: selectedTech.erp[0]
+      };
+    }
+
+    onComplete(assessmentData);
   };
 
   const handleFollowUpAnswer = (questionId: string, answer: string) => {
