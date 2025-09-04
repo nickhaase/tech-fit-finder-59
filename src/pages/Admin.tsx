@@ -75,18 +75,38 @@ const Admin = () => {
     if (!config) return;
     try {
       console.log('🚀 Starting publish process...');
+      
+      // Check storage usage before publishing
+      const storageInfo = (ConfigService as any).getStorageInfo();
+      console.log('💾 Storage usage before publish:', {
+        used: Math.round(storageInfo.used / 1024) + 'KB',
+        remaining: Math.round(storageInfo.remaining / 1024) + 'KB'
+      });
+      
       ConfigService.publish(config);
       setIsDraft(false);
+      
       toast({
         title: "Published Successfully",
-        description: "Your changes are now live on the public site. Changes should appear immediately."
+        description: "Configuration published! Changes should appear on the external page within seconds."
       });
+      
       console.log('✅ Publish completed successfully');
+      
+      // Additional verification
+      setTimeout(() => {
+        const verifyConfig = localStorage.getItem('mx_config_live');
+        console.log('🔍 Post-publish verification:', {
+          configExists: !!verifyConfig,
+          configSize: verifyConfig ? Math.round(verifyConfig.length / 1024) + 'KB' : '0KB'
+        });
+      }, 500);
+      
     } catch (error) {
       console.error('❌ Failed to publish:', error);
       toast({
         title: "Publish Failed",
-        description: error instanceof Error ? error.message : "Failed to publish. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to publish. Please try reducing image sizes.",
         variant: "destructive"
       });
     }

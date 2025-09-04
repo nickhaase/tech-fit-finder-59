@@ -173,8 +173,8 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       }
     };
 
-    const handleConfigUpdate = () => {
-      console.log('🔄 Config update event received');
+    const handleConfigUpdate = (event?: CustomEvent) => {
+      console.log('🔄 Config update event received:', event?.detail || 'unknown');
       const newConfig = ConfigService.getLive();
       setConfig(newConfig);
       toast({
@@ -183,33 +183,52 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       });
     };
 
+    const handleForceRefresh = (event?: CustomEvent) => {
+      console.log('⚡ Force refresh event received:', event?.detail || 'unknown');
+      // Force complete refresh with delay
+      setTimeout(() => {
+        refreshConfig();
+      }, 200);
+    };
+
     const handleFocus = () => {
       console.log('👁️ Window focus detected, checking for config updates');
       refreshConfig();
     };
 
-    // Check for updates every 30 seconds when page is visible
+    // Enhanced event listeners
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('configUpdated', handleConfigUpdate as EventListener);
+    window.addEventListener('forceConfigRefresh', handleForceRefresh as EventListener);
+    window.addEventListener('focus', handleFocus);
+
+    // Check for updates every 5 seconds when page is visible
     const intervalId = setInterval(() => {
       if (!document.hidden) {
-        const newConfig = ConfigService.getLive();
-        if (newConfig.updatedAt !== config.updatedAt) {
-          console.log('🔄 Periodic update detected');
-          setConfig(newConfig);
-          toast({
-            title: "Configuration updated",
-            description: "Latest changes loaded automatically",
-          });
+        const currentTimestamp = config.updatedAt;
+        const storedConfig = localStorage.getItem('mx_config_live');
+        if (storedConfig) {
+          try {
+            const parsed = JSON.parse(storedConfig);
+            if (parsed.updatedAt !== currentTimestamp) {
+              console.log('🔄 Periodic update detected');
+              setConfig(parsed);
+              toast({
+                title: "Configuration updated",
+                description: "Latest changes loaded automatically",
+              });
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
         }
       }
-    }, 30000);
+    }, 5000);
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('configUpdated', handleConfigUpdate);
-    window.addEventListener('focus', handleFocus);
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('configUpdated', handleConfigUpdate);
+      window.removeEventListener('configUpdated', handleConfigUpdate as EventListener);
+      window.removeEventListener('forceConfigRefresh', handleForceRefresh as EventListener);
       window.removeEventListener('focus', handleFocus);
       clearInterval(intervalId);
     };

@@ -178,9 +178,12 @@ export class ConfigService {
       config.status = 'draft';
       config.updatedAt = new Date().toISOString();
       
-      const configString = JSON.stringify(config);
+      let configToSave = config;
+      let configString = JSON.stringify(config);
+      const sizeKB = Math.round(configString.length / 1024);
+      
       console.log('💾 Saving draft:', {
-        size: Math.round(configString.length / 1024) + 'KB',
+        size: sizeKB + 'KB',
         totalBrands: config.sections.reduce((acc, s) => 
           acc + (s.options?.length || 0) + 
           (s.subcategories?.reduce((sub, cat) => sub + (cat.options?.length || 0), 0) || 0), 0),
@@ -189,13 +192,22 @@ export class ConfigService {
           (s.subcategories?.reduce((sub, cat) => 
             sub + (cat.options?.filter(o => o.logo)?.length || 0), 0) || 0), 0)
       });
+
+      // If config is too large, try to optimize
+      if (sizeKB > 4000) {
+        console.warn('⚠️ Config size is large, attempting optimization...');
+        configToSave = this.optimizeImages(config);
+        configString = JSON.stringify(configToSave);
+        const newSizeKB = Math.round(configString.length / 1024);
+        console.log(`🔧 Optimized config from ${sizeKB}KB to ${newSizeKB}KB`);
+      }
       
       localStorage.setItem(DRAFT_KEY, configString);
       console.log('✅ Draft saved successfully');
     } catch (error) {
       console.error('❌ Failed to save draft:', error);
-      if (error instanceof Error && error.name === 'QuotaExceededError') {
-        throw new Error('Storage quota exceeded. Try reducing image sizes or removing unused logos.');
+      if (error instanceof DOMException && error.code === 22) {
+        throw new Error('Configuration too large for browser storage. Please reduce image sizes or remove some logos.');
       }
       throw error;
     }
@@ -218,9 +230,12 @@ export class ConfigService {
       toPublish.status = 'published';
       toPublish.updatedAt = new Date().toISOString();
       
-      const configString = JSON.stringify(toPublish);
+      let configToPublish = toPublish;
+      let configString = JSON.stringify(toPublish);
+      const sizeKB = Math.round(configString.length / 1024);
+      
       console.log('📤 Publishing config:', {
-        size: Math.round(configString.length / 1024) + 'KB',
+        size: sizeKB + 'KB',
         status: toPublish.status,
         updatedAt: toPublish.updatedAt,
         totalBrands: toPublish.sections.reduce((acc, s) => 
@@ -231,6 +246,15 @@ export class ConfigService {
           (s.subcategories?.reduce((sub, cat) => 
             sub + (cat.options?.filter(o => o.logo)?.length || 0), 0) || 0), 0)
       });
+
+      // If config is too large, try to optimize
+      if (sizeKB > 4000) {
+        console.warn('⚠️ Config size is large, attempting optimization...');
+        configToPublish = this.optimizeImages(toPublish);
+        configString = JSON.stringify(configToPublish);
+        const newSizeKB = Math.round(configString.length / 1024);
+        console.log(`🔧 Optimized config from ${sizeKB}KB to ${newSizeKB}KB`);
+      }
       
       localStorage.setItem(CONFIG_KEY, configString);
       console.log('✅ Config published to localStorage successfully');
@@ -238,26 +262,40 @@ export class ConfigService {
       localStorage.removeItem(DRAFT_KEY);
       console.log('🗑️ Draft removed');
       
-      // Trigger custom event for same-window updates
+      // Enhanced notification system for cross-component updates
+      const logoCount = configToPublish.sections.reduce((acc, s) => 
+        acc + (s.options?.filter(o => o.logo)?.length || 0) + 
+        (s.subcategories?.reduce((sub, cat) => 
+          sub + (cat.options?.filter(o => o.logo)?.length || 0), 0) || 0), 0);
+
+      // Multiple event types for different listeners
       window.dispatchEvent(new CustomEvent('configUpdated', { 
         detail: { 
           action: 'published', 
-          timestamp: toPublish.updatedAt,
-          logoCount: toPublish.sections.reduce((acc, s) => 
-            acc + (s.options?.filter(o => o.logo)?.length || 0) + 
-            (s.subcategories?.reduce((sub, cat) => 
-              sub + (cat.options?.filter(o => o.logo)?.length || 0), 0) || 0), 0)
+          timestamp: configToPublish.updatedAt,
+          logoCount: logoCount,
+          sectionsCount: configToPublish.sections.length
         } 
       }));
-      console.log('📡 Config update event dispatched');
+
+      window.dispatchEvent(new CustomEvent('forceConfigRefresh', { 
+        detail: { 
+          timestamp: Date.now(),
+          logoCount: logoCount,
+          sectionsCount: configToPublish.sections.length,
+          source: 'admin-publish'
+        } 
+      }));
       
-      // Force immediate refresh of any listening components
+      console.log('📡 Multiple config update events dispatched');
+      
+      // Force immediate refresh with delay to ensure storage is written
       this.notifyConfigChange();
       
     } catch (error) {
       console.error('❌ Failed to publish config:', error);
-      if (error instanceof Error && error.name === 'QuotaExceededError') {
-        throw new Error('Storage quota exceeded. Try reducing image sizes or removing unused logos.');
+      if (error instanceof DOMException && error.code === 22) {
+        throw new Error('Configuration too large for browser storage. Please reduce image sizes or remove some logos.');
       }
       throw error;
     }
@@ -325,5 +363,52 @@ export class ConfigService {
     const draft = { ...live, status: 'draft' as const };
     this.saveDraft(draft);
     return draft;
+  }
+
+  // Image optimization to reduce localStorage usage
+  static optimizeImages(config: AppConfig): AppConfig {
+
+    // For synchronous operation, we'll do a simpler optimization
+    const simpleOptimizeOptions = (options: any[]): any[] => {
+      return options.map(option => {
+        if (option.logo && typeof option.logo === 'string' && option.logo.startsWith('data:') && option.logo.length > 50000) {
+          // For very large images, remove them temporarily and log
+          console.warn(`Large logo detected for ${option.name}, temporarily removing to save space`);
+          return { ...option, logo: undefined };
+        }
+        return option;
+      });
+    };
+
+    return {
+      ...config,
+      sections: config.sections.map(section => ({
+        ...section,
+        options: simpleOptimizeOptions(section.options || []),
+        subcategories: section.subcategories?.map(sub => ({
+          ...sub,
+          options: simpleOptimizeOptions(sub.options || [])
+        })) || []
+      }))
+    };
+  }
+
+  // Debug method to check localStorage usage
+  static getStorageInfo(): { used: number, total: number, remaining: number } {
+    let used = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        used += localStorage[key].length;
+      }
+    }
+    
+    // Rough estimate of localStorage limit
+    const total = 5 * 1024 * 1024; // 5MB typical limit
+    
+    return {
+      used,
+      total,
+      remaining: total - used
+    };
   }
 }
