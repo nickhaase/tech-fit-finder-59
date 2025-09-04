@@ -8,6 +8,10 @@ import workdayLogo from "@/assets/logos/workday-logo.png";
 import netsuiteLogo from "@/assets/logos/netsuite-logo.png";
 import siemensLogo from "@/assets/logos/siemens-logo.png";
 import schneiderLogo from "@/assets/logos/schneider-logo.png";
+import assetwatchLogo from "@/assets/logos/assetwatch-logo.png";
+import procoreLogo from "@/assets/logos/procore-logo.png";
+import tulipLogo from "@/assets/logos/tulip-logo.png";
+import machinemetricsLogo from "@/assets/logos/machinemetrics-logo.png";
 
 export const ERP_SYSTEMS: CategoryOption[] = [
   {
@@ -98,10 +102,10 @@ export const SENSOR_CATEGORIES: CategoryOption[] = [
         { id: 'pruftechnik', name: 'Pruftechnik', commonNames: [] },
         { id: 'ue_systems', name: 'UE Systems', commonNames: [] },
         { id: 'bentley_nevada', name: 'Bentley Nevada', commonNames: [] },
-        { id: 'assetwatch', name: 'AssetWatch®', commonNames: ['AssetWatch'] },
+        { id: 'assetwatch', name: 'AssetWatch®', commonNames: ['AssetWatch'], logo: assetwatchLogo },
         { id: 'augury', name: 'Augury', commonNames: [] },
         { id: 'guidewheel', name: 'Guidewheel', commonNames: [] },
-        { id: 'machinemetrics', name: 'MachineMetrics', commonNames: [] },
+        { id: 'machinemetrics', name: 'MachineMetrics', commonNames: [], logo: machinemetricsLogo },
         { id: 'shoreline_ai', name: 'Shoreline AI, Inc.', commonNames: ['Shoreline AI'] },
         { id: 'urban_io', name: 'Urban.io', commonNames: ['Urban IO'] },
         { id: 'waites', name: 'WAITES', commonNames: [] },
@@ -195,7 +199,7 @@ export const AUTOMATION_CATEGORIES: CategoryOption[] = [
       brands: [
         { id: 'siemens_opcenter', name: 'Siemens Opcenter', commonNames: ['Opcenter'], logo: siemensLogo },
         { id: 'rockwell_plex', name: 'Rockwell Plex', commonNames: ['Plex Systems'] },
-        { id: 'tulip_mes', name: 'Tulip', commonNames: ['Tulip Interfaces'] },
+        { id: 'tulip_mes', name: 'Tulip', commonNames: ['Tulip Interfaces'], logo: tulipLogo },
         { id: 'aveva_mes', name: 'AVEVA MES', commonNames: [] },
         { id: 'dassault_apriso', name: 'Dassault Apriso', commonNames: ['Apriso'] },
         { id: 'honeywell_mes', name: 'Honeywell', commonNames: [] },
@@ -276,7 +280,7 @@ export const OTHER_SYSTEM_CATEGORIES: CategoryOption[] = [
     name: 'Construction Platforms',
     description: 'Construction management and project platforms',
     brands: [
-      { id: 'procore', name: 'Procore Technologies', commonNames: ['Procore'] },
+      { id: 'procore', name: 'Procore Technologies', commonNames: ['Procore'], logo: procoreLogo },
     ]
   },
   {
