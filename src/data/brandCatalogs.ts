@@ -88,18 +88,26 @@ export const SENSOR_CATEGORIES: CategoryOption[] = [
       { id: 'honeywell_meters', name: 'Honeywell', commonNames: [] },
     ]
   },
-  {
-    id: 'condition_monitoring',
-    name: 'Condition Monitoring',
-    description: 'Predictive maintenance and asset health sensors',
-    brands: [
-      { id: 'emerson_ams', name: 'Emerson AMS', commonNames: ['AMS Suite'] },
-      { id: 'skf', name: 'SKF', commonNames: ['SKF Condition Monitoring'] },
-      { id: 'pruftechnik', name: 'Pruftechnik', commonNames: [] },
-      { id: 'ue_systems', name: 'UE Systems', commonNames: [] },
-      { id: 'bentley_nevada', name: 'Bentley Nevada', commonNames: [] },
-    ]
-  },
+    {
+      id: 'condition_monitoring',
+      name: 'Condition Monitoring',
+      description: 'Predictive maintenance and asset health sensors',
+      brands: [
+        { id: 'emerson_ams', name: 'Emerson AMS', commonNames: ['AMS Suite'] },
+        { id: 'skf', name: 'SKF', commonNames: ['SKF Condition Monitoring'] },
+        { id: 'pruftechnik', name: 'Pruftechnik', commonNames: [] },
+        { id: 'ue_systems', name: 'UE Systems', commonNames: [] },
+        { id: 'bentley_nevada', name: 'Bentley Nevada', commonNames: [] },
+        { id: 'assetwatch', name: 'AssetWatch®', commonNames: ['AssetWatch'] },
+        { id: 'augury', name: 'Augury', commonNames: [] },
+        { id: 'guidewheel', name: 'Guidewheel', commonNames: [] },
+        { id: 'machinemetrics', name: 'MachineMetrics', commonNames: [] },
+        { id: 'shoreline_ai', name: 'Shoreline AI, Inc.', commonNames: ['Shoreline AI'] },
+        { id: 'urban_io', name: 'Urban.io', commonNames: ['Urban IO'] },
+        { id: 'waites', name: 'WAITES', commonNames: [] },
+        { id: 'ugowork', name: 'UgoWork', commonNames: [] },
+      ]
+    },
   {
     id: 'environmental_sensors',
     name: 'Environmental Sensors',
@@ -121,19 +129,20 @@ export const SENSOR_CATEGORIES: CategoryOption[] = [
       { id: 'sick', name: 'SICK', commonNames: ['SICK AG'] },
     ]
   },
-  {
-    id: 'platforms_historians',
-    name: 'Platforms/Historians',
-    description: 'Data collection and historian platforms',
-    brands: [
-      { id: 'osisoft_pi', name: 'OSIsoft/AVEVA PI', commonNames: ['PI System', 'AVEVA PI'] },
-      { id: 'canary', name: 'Canary', commonNames: ['Canary Labs'] },
-      { id: 'ptc_thingworx', name: 'PTC ThingWorx', commonNames: ['ThingWorx'] },
-      { id: 'aws_iot', name: 'AWS IoT', commonNames: ['Amazon IoT'] },
-      { id: 'azure_iot', name: 'Azure IoT', commonNames: ['Microsoft Azure IoT'] },
-      { id: 'kepware', name: 'Kepware', commonNames: ['KEPServerEX'] },
-    ]
-  }
+    {
+      id: 'platforms_historians',
+      name: 'Platforms/Historians',
+      description: 'Data collection and historian platforms',
+      brands: [
+        { id: 'osisoft_pi', name: 'OSIsoft/AVEVA PI', commonNames: ['PI System', 'AVEVA PI'] },
+        { id: 'canary', name: 'Canary', commonNames: ['Canary Labs'] },
+        { id: 'ptc_thingworx', name: 'PTC ThingWorx', commonNames: ['ThingWorx'] },
+        { id: 'aws_iot', name: 'AWS IoT', commonNames: ['Amazon IoT'] },
+        { id: 'azure_iot', name: 'Azure IoT', commonNames: ['Microsoft Azure IoT'] },
+        { id: 'kepware', name: 'Kepware', commonNames: ['KEPServerEX'] },
+        { id: 'twinthread', name: 'Twinthread', commonNames: [] },
+      ]
+    }
 ];
 
 export const AUTOMATION_CATEGORIES: CategoryOption[] = [
@@ -179,19 +188,20 @@ export const AUTOMATION_CATEGORIES: CategoryOption[] = [
       { id: 'abb_800xa', name: 'ABB System 800xA', commonNames: ['800xA'] },
     ]
   },
-  {
-    id: 'mes',
-    name: 'MES (Manufacturing Execution Systems)',
-    description: 'Production and manufacturing execution',
-    brands: [
-      { id: 'siemens_opcenter', name: 'Siemens Opcenter', commonNames: ['Opcenter'], logo: siemensLogo },
-      { id: 'rockwell_plex', name: 'Rockwell Plex', commonNames: ['Plex Systems'] },
-      { id: 'tulip_mes', name: 'Tulip', commonNames: ['Tulip Interfaces'] },
-      { id: 'aveva_mes', name: 'AVEVA MES', commonNames: [] },
-      { id: 'dassault_apriso', name: 'Dassault Apriso', commonNames: ['Apriso'] },
-      { id: 'honeywell_mes', name: 'Honeywell', commonNames: [] },
-    ]
-  },
+    {
+      id: 'mes',
+      name: 'MES (Manufacturing Execution Systems)',
+      description: 'Production and manufacturing execution',
+      brands: [
+        { id: 'siemens_opcenter', name: 'Siemens Opcenter', commonNames: ['Opcenter'], logo: siemensLogo },
+        { id: 'rockwell_plex', name: 'Rockwell Plex', commonNames: ['Plex Systems'] },
+        { id: 'tulip_mes', name: 'Tulip', commonNames: ['Tulip Interfaces'] },
+        { id: 'aveva_mes', name: 'AVEVA MES', commonNames: [] },
+        { id: 'dassault_apriso', name: 'Dassault Apriso', commonNames: ['Apriso'] },
+        { id: 'honeywell_mes', name: 'Honeywell', commonNames: [] },
+        { id: 'majik_systems', name: 'MAJiK Systems', commonNames: [] },
+      ]
+    },
   {
     id: 'hmi',
     name: 'HMI (Human Machine Interface)',
@@ -231,6 +241,7 @@ export const OTHER_SYSTEM_CATEGORIES: CategoryOption[] = [
       { id: 'soti', name: 'SOTI', commonNames: [] },
       { id: 'asset_panda', name: 'Asset Panda', commonNames: [] },
       { id: 'bartender', name: 'BarTender', commonNames: ['Seagull BarTender'] },
+      { id: 'hapn', name: 'Hapn', commonNames: ['Hapn GPS'] },
     ]
   },
   {
@@ -243,6 +254,7 @@ export const OTHER_SYSTEM_CATEGORIES: CategoryOption[] = [
       { id: 'odoo_inventory', name: 'Odoo', commonNames: ['Odoo Inventory'] },
       { id: 'blue_yonder', name: 'Blue Yonder', commonNames: ['JDA'] },
       { id: 'manhattan', name: 'Manhattan Associates', commonNames: ['Manhattan WMS'] },
+      { id: 'kojo', name: 'Kojo (Formerly Agora Systems)', commonNames: ['Agora Systems', 'Kojo Procurement'] },
     ]
   },
   {
@@ -257,6 +269,22 @@ export const OTHER_SYSTEM_CATEGORIES: CategoryOption[] = [
       { id: 'boomi', name: 'Boomi', commonNames: ['Dell Boomi'] },
       { id: 'mulesoft', name: 'MuleSoft', commonNames: [] },
       { id: 'workato', name: 'Workato', commonNames: [] },
+    ]
+  },
+  {
+    id: 'construction_platforms',
+    name: 'Construction Platforms',
+    description: 'Construction management and project platforms',
+    brands: [
+      { id: 'procore', name: 'Procore Technologies', commonNames: ['Procore'] },
+    ]
+  },
+  {
+    id: 'consulting_sis',
+    name: 'Consulting & System Integrators',
+    description: 'Integration consulting and system implementation services',
+    brands: [
+      { id: 'zenza_consulting', name: 'Zenza Consulting', commonNames: [] },
     ]
   }
 ];
