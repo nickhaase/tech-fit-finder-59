@@ -149,12 +149,25 @@ export const BrandPicker = ({
                 onClick={() => handleBrandSelect(brand)}
               >
                 <div className="flex items-start gap-3">
-                  {brand.logo && (
+                  {brand.logo ? (
                     <img 
                       src={brand.logo} 
                       alt={`${brand.name} logo`}
                       className="w-8 h-8 object-contain flex-shrink-0 mt-1"
+                      onError={(e) => {
+                        console.warn(`❌ Failed to load logo for ${brand.name}:`, brand.logo);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                      onLoad={() => {
+                        console.log(`✅ Successfully loaded logo for ${brand.name}:`, brand.logo);
+                      }}
                     />
+                  ) : (
+                    <div className="w-8 h-8 bg-muted rounded flex-shrink-0 mt-1 flex items-center justify-center">
+                      <span className="text-xs text-muted-foreground font-semibold">
+                        {brand.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                   )}
                   <div className="flex-1">
                     <div className="flex items-start justify-between">

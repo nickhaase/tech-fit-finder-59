@@ -156,11 +156,32 @@ export class ConfigService {
     // Publish new config
     toPublish.status = 'published';
     toPublish.updatedAt = new Date().toISOString();
+    
+    console.log('🚀 Publishing config with logos:', {
+      sectionsCount: toPublish.sections.length,
+      totalLogos: toPublish.sections.reduce((acc, s) => 
+        acc + s.options.filter(o => o.logo).length + 
+        (s.subcategories?.reduce((sub, cat) => sub + cat.options.filter(o => o.logo).length, 0) || 0), 0
+      ),
+      timestamp: toPublish.updatedAt
+    });
+    
     localStorage.setItem(CONFIG_KEY, JSON.stringify(toPublish));
     localStorage.removeItem(DRAFT_KEY);
     
     // Trigger custom event for same-window updates
-    window.dispatchEvent(new CustomEvent('configUpdated'));
+    window.dispatchEvent(new CustomEvent('configUpdated', { 
+      detail: { 
+        action: 'published', 
+        timestamp: toPublish.updatedAt,
+        logoCount: toPublish.sections.reduce((acc, s) => 
+          acc + s.options.filter(o => o.logo).length + 
+          (s.subcategories?.reduce((sub, cat) => sub + cat.options.filter(o => o.logo).length, 0) || 0), 0
+        )
+      } 
+    }));
+    
+    console.log('✅ Config published and event dispatched');
   }
 
   static saveVersion(config: AppConfig, description?: string): void {

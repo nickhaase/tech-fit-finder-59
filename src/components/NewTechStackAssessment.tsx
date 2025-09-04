@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
 import { 
   CheckCircle, 
   ArrowRight, 
@@ -20,7 +21,8 @@ import {
   Zap,
   Target,
   Building,
-  Shield
+  Shield,
+  RefreshCw
 } from "lucide-react";
 
 import { BrandPicker } from "@/components/BrandPicker";
@@ -43,26 +45,117 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   const [currentStep, setCurrentStep] = useState(0);
   const [mode, setMode] = useState<'quick' | 'advanced'>('quick');
   const [config, setConfig] = useState<AppConfig>(() => ConfigService.getLive());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { toast } = useToast();
+
+  // Debug function to log config state
+  const debugConfig = () => {
+    console.log('🔍 Current config state:', {
+      sections: config.sections.length,
+      status: config.status,
+      updatedAt: config.updatedAt,
+      hasLogos: config.sections.some(s => 
+        s.options.some(o => o.logo) || 
+        s.subcategories?.some(sub => sub.options.some(o => o.logo))
+      )
+    });
+    
+    // Log a sample of logos found
+    const allLogos: string[] = [];
+    config.sections.forEach(section => {
+      section.options.forEach(option => {
+        if (option.logo) allLogos.push(`${option.name}: ${option.logo}`);
+      });
+      section.subcategories?.forEach(sub => {
+        sub.options.forEach(option => {
+          if (option.logo) allLogos.push(`${option.name}: ${option.logo}`);
+        });
+      });
+    });
+    console.log('🖼️ Found logos:', allLogos.slice(0, 5));
+  };
+
+  // Manual refresh function
+  const refreshConfig = async () => {
+    setIsRefreshing(true);
+    try {
+      const newConfig = ConfigService.getLive();
+      setConfig(newConfig);
+      debugConfig();
+      toast({
+        title: "Configuration refreshed",
+        description: `Updated at ${new Date(newConfig.updatedAt).toLocaleTimeString()}`,
+      });
+    } catch (error) {
+      console.error('Failed to refresh config:', error);
+      toast({
+        title: "Refresh failed",
+        description: "Could not load latest configuration",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Listen for config changes from admin
   useEffect(() => {
+    // Debug initial state
+    debugConfig();
+    
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'mx_config_live') {
-        setConfig(ConfigService.getLive());
+        console.log('📡 Storage change detected for config');
+        const newConfig = ConfigService.getLive();
+        setConfig(newConfig);
+        toast({
+          title: "Configuration updated",
+          description: "New logos and settings loaded",
+        });
       }
     };
 
     const handleConfigUpdate = () => {
-      setConfig(ConfigService.getLive());
+      console.log('🔄 Config update event received');
+      const newConfig = ConfigService.getLive();
+      setConfig(newConfig);
+      toast({
+        title: "Configuration updated",
+        description: "New logos and settings loaded",
+      });
     };
+
+    const handleFocus = () => {
+      console.log('👁️ Window focus detected, checking for config updates');
+      refreshConfig();
+    };
+
+    // Check for updates every 30 seconds when page is visible
+    const intervalId = setInterval(() => {
+      if (!document.hidden) {
+        const newConfig = ConfigService.getLive();
+        if (newConfig.updatedAt !== config.updatedAt) {
+          console.log('🔄 Periodic update detected');
+          setConfig(newConfig);
+          toast({
+            title: "Configuration updated",
+            description: "Latest changes loaded automatically",
+          });
+        }
+      }
+    }, 30000);
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('configUpdated', handleConfigUpdate);
+    window.addEventListener('focus', handleFocus);
+    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('configUpdated', handleConfigUpdate);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(intervalId);
     };
-  }, []);
+  }, [config.updatedAt]);
   
   // Assessment state
   const [erp, setErp] = useState<IntegrationDetail | null>(null);
@@ -744,6 +837,26 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Answer questions about your current systems and see how MaintainX can seamlessly integrate with your infrastructure.
           </p>
+          
+          {/* Debug panel */}
+          <div className="mt-4 p-3 bg-muted/50 rounded-lg text-sm max-w-md mx-auto">
+            <details>
+              <summary className="cursor-pointer font-medium">Config Status</summary>
+              <div className="mt-2 text-left space-y-1">
+                <p><strong>Updated:</strong> {new Date(config.updatedAt).toLocaleString()}</p>
+                <p><strong>Logos:</strong> {config.sections.reduce((acc, s) => 
+                  acc + s.options.filter(o => o.logo).length + 
+                  (s.subcategories?.reduce((sub, cat) => sub + cat.options.filter(o => o.logo).length, 0) || 0), 0
+                )}</p>
+                <button 
+                  onClick={debugConfig}
+                  className="mt-2 px-2 py-1 bg-primary text-primary-foreground rounded text-xs"
+                >
+                  Debug Console
+                </button>
+              </div>
+            </details>
+          </div>
         </div>
 
         <Card className="p-8 bg-gradient-card shadow-card border-0">
@@ -791,15 +904,29 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
           )}
 
           <div className="flex items-center justify-between mt-8">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-              disabled={currentStep === 0}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Previous
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                disabled={currentStep === 0}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Previous
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={refreshConfig}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                title="Refresh configuration to load latest logos and settings"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Loading...' : 'Refresh'}
+              </Button>
+            </div>
 
             {currentStep < totalSteps - 1 ? (
               <Button
