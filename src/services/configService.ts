@@ -158,6 +158,9 @@ export class ConfigService {
     toPublish.updatedAt = new Date().toISOString();
     localStorage.setItem(CONFIG_KEY, JSON.stringify(toPublish));
     localStorage.removeItem(DRAFT_KEY);
+    
+    // Trigger custom event for same-window updates
+    window.dispatchEvent(new CustomEvent('configUpdated'));
   }
 
   static saveVersion(config: AppConfig, description?: string): void {

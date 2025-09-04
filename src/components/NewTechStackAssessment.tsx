@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -42,7 +42,27 @@ interface NewTechStackAssessmentProps {
 export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [mode, setMode] = useState<'quick' | 'advanced'>('quick');
-  const [config] = useState<AppConfig>(() => ConfigService.getLive());
+  const [config, setConfig] = useState<AppConfig>(() => ConfigService.getLive());
+
+  // Listen for config changes from admin
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'mx_config_live') {
+        setConfig(ConfigService.getLive());
+      }
+    };
+
+    const handleConfigUpdate = () => {
+      setConfig(ConfigService.getLive());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('configUpdated', handleConfigUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('configUpdated', handleConfigUpdate);
+    };
+  }, []);
   
   // Assessment state
   const [erp, setErp] = useState<IntegrationDetail | null>(null);
