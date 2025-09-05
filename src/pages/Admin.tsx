@@ -18,6 +18,7 @@ import { ImportManager } from '@/components/admin/ImportManager';
 import { Save, Eye, Zap, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
+import { createTestAssessment } from '@/utils/testAssessment';
 
 const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -237,6 +238,32 @@ const Admin = () => {
             <Button variant="outline" size="sm" onClick={handlePreview}>
               <Eye className="w-4 h-4 mr-2" />
               Preview
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={async () => {
+                const result = await createTestAssessment();
+                if (result.success && result.url) {
+                  toast({
+                    title: "Test Assessment Created",
+                    description: "Assessment saved successfully",
+                    action: (
+                      <ToastAction altText="View" onClick={() => window.open(result.url, '_blank')}>
+                        View External
+                      </ToastAction>
+                    ),
+                  });
+                } else {
+                  toast({
+                    title: "Test Failed",
+                    description: result.error || "Unknown error",
+                    variant: "destructive"
+                  });
+                }
+              }}
+            >
+              Test Assessment
             </Button>
             {isDraft ? (
               <>

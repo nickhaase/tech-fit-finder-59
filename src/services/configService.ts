@@ -162,6 +162,7 @@ const createDefaultConfig = (): AppConfig => {
     updatedAt: new Date().toISOString(),
     sections,
     crossListingEnabled: true,
+    globalBrands: [], // Initialize empty global brands array
     synonymMap: {
       'Wonderware': 'AVEVA/Wonderware',
       'Agora': 'Kojo (Formerly Agora Systems)',
@@ -227,7 +228,11 @@ export class ConfigService {
           base.synonymMap = { ...def.synonymMap, ...base.synonymMap };
 
           // 3) Preserve global brands and custom links/logos
-          if (parsed.globalBrands) base.globalBrands = parsed.globalBrands;
+          if (parsed.globalBrands) {
+            base.globalBrands = parsed.globalBrands;
+          } else {
+            base.globalBrands = def.globalBrands || [];
+          }
 
           // 4) Carry over cross-listing flag
           if (typeof base.crossListingEnabled === 'undefined') {
