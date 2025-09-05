@@ -8,49 +8,66 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 210 12% 16%;
+    --background: 0 0% 100%;
+    --foreground: 210 24% 16%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 12% 16%;
+    --card-foreground: 210 24% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 12% 16%;
+    --popover-foreground: 210 24% 16%;
 
-    --primary: 214 84% 56%;
+    /* MaintainX Blue - Primary */
+    --primary: 221 100% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 214 84% 70%;
+    --primary-glow: 221 100% 70%;
 
-    --secondary: 210 40% 94%;
-    --secondary-foreground: 210 12% 16%;
+    /* Hydraulic Blue - Secondary */
+    --secondary: 210 100% 13%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 94%;
+    --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 142 86% 28%;
+    /* Safety Green - Accent */
+    --accent: 150 71% 48%;
     --accent-foreground: 0 0% 100%;
+
+    /* Safety Orange - Warning */
+    --warning: 33 100% 64%;
+    --warning-foreground: 210 24% 16%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 214 84% 56%;
+    --ring: 221 100% 58%;
 
     --radius: 0.75rem;
 
-    /* Custom design tokens */
+    /* MaintainX Brand Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-hero: linear-gradient(135deg, hsl(214 84% 56%), hsl(142 86% 28%));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --gradient-data: linear-gradient(90deg, hsl(var(--accent)), hsl(var(--primary)));
+    --gradient-flow: linear-gradient(45deg, hsl(var(--primary)), hsl(var(--accent)));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 40% 98%));
+    
     --shadow-soft: 0 4px 20px -4px hsl(var(--primary) / 0.1);
     --shadow-card: 0 10px 40px -10px hsl(var(--primary) / 0.15);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
+    /* Animation Colors */
+    --flow-primary: 221 100% 58%;
+    --flow-secondary: 150 71% 48%;
+    --flow-warning: 33 100% 64%;
+    --glow-primary: 221 100% 58% / 0.3;
+    --glow-accent: 150 71% 48% / 0.3;
+
     /* Animation design tokens */
     --animation-duration: 0.6s;
     --animation-delay: 0.1s;
-    --pulse-glow: 0 0 20px hsl(var(--primary) / 0.5);
+    --pulse-glow: 0 0 20px hsl(var(--glow-primary));
 
     --sidebar-background: 0 0% 98%;
 
