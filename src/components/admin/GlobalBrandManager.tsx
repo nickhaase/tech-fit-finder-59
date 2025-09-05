@@ -26,39 +26,75 @@ export const GlobalBrandManager = ({ config, onConfigChange }: GlobalBrandManage
   const [filterState, setFilterState] = useState<string>('all');
   const [editingBrand, setEditingBrand] = useState<GlobalBrand | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Initialize global brands if not present
-  const globalBrands = config.globalBrands || [];
-
-  // Get all section options for filtering
-  const allSections = useMemo(() => {
-    const sections: { id: string; label: string }[] = [];
-    config.sections.forEach(section => {
-      sections.push({ id: section.id, label: section.label });
-      if (section.subcategories) {
-        section.subcategories.forEach(sub => {
-          sections.push({ id: sub.id, label: `${section.label} > ${sub.label}` });
-        });
+  // Safely initialize global brands with error handling
+  const globalBrands = useMemo(() => {
+    try {
+      if (!config || !config.globalBrands) {
+        return [];
       }
-    });
-    return sections;
-  }, [config.sections]);
+      return Array.isArray(config.globalBrands) ? config.globalBrands : [];
+    } catch (err) {
+      console.error('Error accessing global brands:', err);
+      setError('Failed to load global brands');
+      return [];
+    }
+  }, [config]);
 
-  // Filter brands based on search and filters
+  // Get all section options for filtering with error handling
+  const allSections = useMemo(() => {
+    try {
+      const sections: { id: string; label: string }[] = [];
+      if (!config?.sections || !Array.isArray(config.sections)) {
+        return sections;
+      }
+      
+      config.sections.forEach(section => {
+        if (section?.id && section?.label) {
+          sections.push({ id: section.id, label: section.label });
+          if (section.subcategories && Array.isArray(section.subcategories)) {
+            section.subcategories.forEach(sub => {
+              if (sub?.id && sub?.label) {
+                sections.push({ id: sub.id, label: `${section.label} > ${sub.label}` });
+              }
+            });
+          }
+        }
+      });
+      return sections;
+    } catch (err) {
+      console.error('Error processing sections:', err);
+      return [];
+    }
+  }, [config?.sections]);
+
+  // Filter brands based on search and filters with error handling
   const filteredBrands = useMemo(() => {
-    return globalBrands.filter(brand => {
-      const matchesSearch = brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           brand.synonyms.some(syn => syn.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesSection = filterSection === 'all' || 
-                            brand.assignedSections.includes(filterSection) ||
-                            (filterSection === 'unassigned' && brand.assignedSections.length === 0);
-      
-      const matchesState = filterState === 'all' || brand.state === filterState;
-      
-      return matchesSearch && matchesSection && matchesState;
-    });
+    try {
+      return globalBrands.filter(brand => {
+        if (!brand) return false;
+        
+        const brandName = brand.name || '';
+        const brandSynonyms = Array.isArray(brand.synonyms) ? brand.synonyms : [];
+        const brandSections = Array.isArray(brand.assignedSections) ? brand.assignedSections : [];
+        
+        const matchesSearch = brandName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             brandSynonyms.some(syn => syn && syn.toLowerCase().includes(searchTerm.toLowerCase()));
+        
+        const matchesSection = filterSection === 'all' || 
+                              brandSections.includes(filterSection) ||
+                              (filterSection === 'unassigned' && brandSections.length === 0);
+        
+        const matchesState = filterState === 'all' || brand.state === filterState;
+        
+        return matchesSearch && matchesSection && matchesState;
+      });
+    } catch (err) {
+      console.error('Error filtering brands:', err);
+      return [];
+    }
   }, [globalBrands, searchTerm, filterSection, filterState]);
 
   const createNewBrand = (): GlobalBrand => ({
@@ -82,39 +118,66 @@ export const GlobalBrandManager = ({ config, onConfigChange }: GlobalBrandManage
   };
 
   const handleSaveBrand = () => {
-    if (!editingBrand) return;
-
-    // Generate ID if creating new
-    if (isCreating && !editingBrand.id) {
-      editingBrand.id = editingBrand.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '_')
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '');
-    }
-
-    const updatedConfig = { ...config };
-    if (!updatedConfig.globalBrands) {
-      updatedConfig.globalBrands = [];
-    }
-
-    if (isCreating) {
-      updatedConfig.globalBrands.push(editingBrand);
-    } else {
-      const index = updatedConfig.globalBrands.findIndex(b => b.id === editingBrand.id);
-      if (index >= 0) {
-        updatedConfig.globalBrands[index] = editingBrand;
+    try {
+      if (!editingBrand || !editingBrand.name.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Brand name is required.",
+          variant: "destructive"
+        });
+        return;
       }
-    }
 
-    onConfigChange(updatedConfig);
-    setEditingBrand(null);
-    setIsCreating(false);
-    
-    toast({
-      title: isCreating ? "Brand Created" : "Brand Updated",
-      description: `${editingBrand.name} has been ${isCreating ? 'created' : 'updated'}.`
-    });
+      // Generate ID if creating new
+      if (isCreating && !editingBrand.id) {
+        editingBrand.id = editingBrand.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_|_$/g, '');
+      }
+
+      const updatedConfig = { ...config };
+      if (!updatedConfig.globalBrands) {
+        updatedConfig.globalBrands = [];
+      }
+
+      // Check for duplicate IDs when creating
+      if (isCreating) {
+        const existingBrand = updatedConfig.globalBrands.find(b => b.id === editingBrand.id);
+        if (existingBrand) {
+          toast({
+            title: "Duplicate Brand",
+            description: "A brand with this name already exists.",
+            variant: "destructive"
+          });
+          return;
+        }
+        updatedConfig.globalBrands.push(editingBrand);
+      } else {
+        const index = updatedConfig.globalBrands.findIndex(b => b.id === editingBrand.id);
+        if (index >= 0) {
+          updatedConfig.globalBrands[index] = editingBrand;
+        }
+      }
+
+      onConfigChange(updatedConfig);
+      setEditingBrand(null);
+      setIsCreating(false);
+      setError(null);
+      
+      toast({
+        title: isCreating ? "Brand Created" : "Brand Updated",
+        description: `${editingBrand.name} has been ${isCreating ? 'created' : 'updated'}.`
+      });
+    } catch (err) {
+      console.error('Error saving brand:', err);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save brand. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDeleteBrand = (brandId: string) => {
@@ -183,6 +246,28 @@ export const GlobalBrandManager = ({ config, onConfigChange }: GlobalBrandManage
       default: return 'outline';
     }
   };
+
+  // Error boundary fallback
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button 
+              onClick={() => {
+                setError(null);
+                window.location.reload();
+              }}
+              variant="outline"
+            >
+              Reload Page
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -357,9 +357,17 @@ export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) =>
   };
 
   const publishCatalogChanges = () => {
-    if (!catalogDiff || !catalogParsed) return;
-    
-    const newConfig = { ...config };
+    try {
+      if (!catalogDiff || !catalogParsed) {
+        toast({
+          title: "Import Error",
+          description: "No changes to publish. Please parse the CSV first.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const newConfig = { ...config };
     
     // Create a map of existing sections and subsections
     const sectionMap = new Map<string, ConfigSection>();
@@ -463,11 +471,19 @@ export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) =>
       description: `Added ${catalogDiff.adds.length} brands, updated ${catalogDiff.updates.length} brands`
     });
     
-    // Reset state
-    setCatalogDiff(null);
-    setCatalogParsed(null);
-    setCatalogText('');
-    setCatalogUrl('');
+      // Reset state
+      setCatalogDiff(null);
+      setCatalogParsed(null);
+      setCatalogText('');
+      setCatalogUrl('');
+    } catch (error) {
+      console.error('Catalog import failed:', error);
+      toast({
+        title: "Import Failed",
+        description: "Failed to import catalog. Please check the data and try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const publishSynonymChanges = () => {
@@ -594,48 +610,94 @@ export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) =>
   };
 
   const publishGlobalBrandChanges = () => {
-    if (!globalBrandDiff) return;
-    
-    const newConfig = { ...config };
-    
-    // Initialize global brands array if it doesn't exist
-    if (!newConfig.globalBrands) {
-      newConfig.globalBrands = [];
-    }
-    
-    // Apply additions and updates
-    [...globalBrandDiff.adds, ...globalBrandDiff.updates].forEach(importBrand => {
-      const globalBrand: GlobalBrand = {
-        id: importBrand.id,
-        name: importBrand.name,
-        logo: importBrand.logo,
-        synonyms: importBrand.synonyms,
-        state: importBrand.state,
-        assignedSections: importBrand.assignedSections,
-      };
-      
-      const existingIndex = newConfig.globalBrands!.findIndex(b => b.id === globalBrand.id);
-      if (existingIndex >= 0) {
-        // Update existing
-        newConfig.globalBrands![existingIndex] = globalBrand;
-      } else {
-        // Add new
-        newConfig.globalBrands!.push(globalBrand);
+    try {
+      if (!globalBrandDiff) {
+        toast({
+          title: "Import Error",
+          description: "No changes to publish. Please parse the CSV first.",
+          variant: "destructive"
+        });
+        return;
       }
-    });
-    
-    onConfigChange(newConfig);
-    
-    toast({
-      title: "Global Brands Imported",
-      description: `Added ${globalBrandDiff.adds.length} brands, updated ${globalBrandDiff.updates.length} brands`
-    });
-    
-    // Reset state
-    setGlobalBrandDiff(null);
-    setGlobalBrandParsed(null);
-    setGlobalBrandText('');
-    setGlobalBrandUrl('');
+      
+      const newConfig = { ...config };
+      
+      // Initialize global brands array if it doesn't exist
+      if (!newConfig.globalBrands) {
+        newConfig.globalBrands = [];
+      }
+      
+      // Validate all changes before applying
+      const allImportBrands = [...globalBrandDiff.adds, ...globalBrandDiff.updates];
+      const brandIds = new Set<string>();
+      const duplicateNames = new Set<string>();
+      
+      for (const importBrand of allImportBrands) {
+        if (!importBrand.name?.trim()) {
+          toast({
+            title: "Validation Error",
+            description: "All brands must have a name.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (brandIds.has(importBrand.id)) {
+          duplicateNames.add(importBrand.name);
+        }
+        brandIds.add(importBrand.id);
+      }
+      
+      if (duplicateNames.size > 0) {
+        toast({
+          title: "Duplicate Brands",
+          description: `Duplicate brand names found: ${Array.from(duplicateNames).join(', ')}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Apply additions and updates
+      allImportBrands.forEach(importBrand => {
+        const globalBrand: GlobalBrand = {
+          id: importBrand.id,
+          name: importBrand.name,
+          logo: importBrand.logo || '',
+          synonyms: Array.isArray(importBrand.synonyms) ? importBrand.synonyms : [],
+          state: importBrand.state || 'active',
+          assignedSections: Array.isArray(importBrand.assignedSections) ? importBrand.assignedSections : [],
+        };
+        
+        const existingIndex = newConfig.globalBrands!.findIndex(b => b.id === globalBrand.id);
+        if (existingIndex >= 0) {
+          // Update existing
+          newConfig.globalBrands![existingIndex] = globalBrand;
+        } else {
+          // Add new
+          newConfig.globalBrands!.push(globalBrand);
+        }
+      });
+      
+      onConfigChange(newConfig);
+      
+      toast({
+        title: "Global Brands Imported",
+        description: `Added ${globalBrandDiff.adds.length} brands, updated ${globalBrandDiff.updates.length} brands`
+      });
+      
+      // Reset state
+      setGlobalBrandDiff(null);
+      setGlobalBrandParsed(null);
+      setGlobalBrandText('');
+      setGlobalBrandUrl('');
+    } catch (error) {
+      console.error('Global brand import failed:', error);
+      toast({
+        title: "Import Failed",
+        description: "Failed to import global brands. Please check the data and try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
