@@ -8,6 +8,7 @@ import { IntegrationExplanations } from "@/components/IntegrationExplanations";
 import { DataFlowVisualization } from "@/components/DataFlowVisualization";
 import { generateAssessmentReport } from "@/utils/pdfGenerator";
 import { useToast } from "@/hooks/use-toast";
+import { ConfigService } from "@/services/configService";
 import { CheckCircle, RefreshCw, Download, Share2 } from "lucide-react";
 
 interface AssessmentResultsProps {
@@ -36,7 +37,8 @@ export const AssessmentResults = ({ data, onRestart }: AssessmentResultsProps) =
   const handleDownloadReport = async () => {
     setIsGeneratingPdf(true);
     try {
-      const pdfBlob = await generateAssessmentReport(data);
+      const appConfig = ConfigService.getLive();
+      const pdfBlob = await generateAssessmentReport(data, appConfig);
       const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -48,7 +50,7 @@ export const AssessmentResults = ({ data, onRestart }: AssessmentResultsProps) =
       
       toast({
         title: "Report Downloaded",
-        description: "Your integration assessment report has been downloaded successfully.",
+        description: "Your professional integration assessment report has been downloaded successfully.",
       });
     } catch (error) {
       console.error('Error generating PDF:', error);
