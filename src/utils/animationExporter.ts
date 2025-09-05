@@ -4,6 +4,19 @@ import { Flow, generateFlowsForNode } from "@/utils/generateFlows";
 // @ts-ignore - gif.js doesn't have proper TypeScript definitions
 import GIF from 'gif.js';
 
+// Brand colors based on MaintainX guidelines
+const BRAND_COLORS = {
+  primary: '#246CFF',           // MaintainX Blue
+  primaryDark: '#001E40',       // Hydraulic Blue
+  accent: '#2ED888',            // Safety Green
+  warning: '#FFA945',           // Safety Orange
+  background: '#000000',
+  foreground: '#ffffff',
+  muted: '#64748b',
+  card: '#1e293b',
+  border: '#334155'
+};
+
 export interface ExportOptions {
   format: 'gif' | 'mp4';
   duration: number; // in seconds
@@ -48,13 +61,14 @@ export class AnimationExporter {
   }
 
   private async exportGIF(options: ExportOptions): Promise<Blob> {
-    const gif = new GIF({
-      workers: 2,
-      quality: options.quality === 'high' ? 1 : options.quality === 'medium' ? 5 : 10,
-      width: options.width,
-      height: options.height,
-      workerScript: '/gif.worker.js'
-    });
+    try {
+      const gif = new GIF({
+        workers: 2,
+        quality: options.quality === 'high' ? 1 : options.quality === 'medium' ? 5 : 10,
+        width: options.width,
+        height: options.height,
+        workerScript: '/gif.worker.local.js'
+      });
 
     const totalFrames = options.duration * options.fps;
     const animationCycles = Math.ceil(options.duration / 3); // 3 seconds per cycle
@@ -79,21 +93,29 @@ export class AnimationExporter {
 
     this.onProgress({ stage: 'encoding', progress: 50 });
 
-    return new Promise((resolve) => {
-      gif.on('finished', (blob: Blob) => {
-        this.onProgress({ stage: 'complete', progress: 100 });
-        resolve(blob);
-      });
-      
-      gif.on('progress', (progress: number) => {
-        this.onProgress({ 
-          stage: 'encoding', 
-          progress: 50 + (progress * 50) 
+      return new Promise((resolve, reject) => {
+        gif.on('finished', (blob: Blob) => {
+          this.onProgress({ stage: 'complete', progress: 100 });
+          resolve(blob);
         });
-      });
+        
+        gif.on('progress', (progress: number) => {
+          this.onProgress({ 
+            stage: 'encoding', 
+            progress: 50 + (progress * 50) 
+          });
+        });
 
-      gif.render();
-    });
+        gif.on('abort', () => {
+          reject(new Error('GIF rendering was aborted'));
+        });
+
+        gif.render();
+      });
+    } catch (error) {
+      console.error('GIF export error:', error);
+      throw new Error(`Failed to export GIF: ${error.message}`);
+    }
   }
 
   private async exportVideo(options: ExportOptions): Promise<Blob> {
@@ -154,15 +176,15 @@ export class AnimationExporter {
     const ctx = this.ctx;
     const { width, height } = this.canvas;
     
-    // Clear canvas
-    ctx.fillStyle = '#000';
+    // Clear canvas with brand background
+    ctx.fillStyle = BRAND_COLORS.background;
     ctx.fillRect(0, 0, width, height);
     
-    // Apply gradient background
+    // Apply gradient background using brand colors
     const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, 'hsl(var(--background))');
-    gradient.addColorStop(0.5, 'hsl(var(--primary) / 0.05)');
-    gradient.addColorStop(1, 'hsl(var(--accent) / 0.1)');
+    gradient.addColorStop(0, BRAND_COLORS.background);
+    gradient.addColorStop(0.5, BRAND_COLORS.primary + '20'); // 20% opacity
+    gradient.addColorStop(1, BRAND_COLORS.accent + '10'); // 10% opacity
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
     
@@ -187,7 +209,7 @@ export class AnimationExporter {
     const spacing = 10;
     const startY = 100;
     
-    ctx.font = '14px sans-serif';
+    ctx.font = '14px Inter, sans-serif';
     ctx.textAlign = 'left';
     
     this.systems.forEach((system, index) => {
@@ -195,8 +217,8 @@ export class AnimationExporter {
       const isActive = index === activeIndex;
       
       // System container
-      ctx.fillStyle = isActive ? 'hsl(var(--primary) / 0.1)' : 'hsl(var(--card))';
-      ctx.strokeStyle = isActive ? 'hsl(var(--primary))' : 'hsl(var(--border))';
+      ctx.fillStyle = isActive ? BRAND_COLORS.primary + '20' : BRAND_COLORS.card;
+      ctx.strokeStyle = isActive ? BRAND_COLORS.primary : BRAND_COLORS.border;
       ctx.lineWidth = isActive ? 2 : 1;
       
       this.roundedRect(ctx, padding, y, maxWidth - (padding * 2), systemHeight, 8);
@@ -204,17 +226,17 @@ export class AnimationExporter {
       ctx.stroke();
       
       // System name
-      ctx.fillStyle = 'hsl(var(--foreground))';
-      ctx.font = 'bold 16px sans-serif';
+      ctx.fillStyle = BRAND_COLORS.foreground;
+      ctx.font = 'bold 16px Inter, sans-serif';
       ctx.fillText(system.name, padding + 15, y + 25);
       
       // System category
-      ctx.fillStyle = 'hsl(var(--muted-foreground))';
-      ctx.font = '12px sans-serif';
+      ctx.fillStyle = BRAND_COLORS.muted;
+      ctx.font = '12px Inter, sans-serif';
       ctx.fillText(system.category, padding + 15, y + 45);
       
       // Status indicator
-      ctx.fillStyle = system.frequency === 'real-time' ? 'hsl(var(--accent))' : 'hsl(var(--primary))';
+      ctx.fillStyle = system.frequency === 'real-time' ? BRAND_COLORS.accent : BRAND_COLORS.primary;
       ctx.beginPath();
       ctx.arc(padding + maxWidth - 40, y + 25, 6, 0, Math.PI * 2);
       ctx.fill();
@@ -230,10 +252,14 @@ export class AnimationExporter {
       const y = startY + (index * flowSpacing);
       const isInbound = flow.direction === 'inbound';
       
-      // Connection line
-      ctx.strokeStyle = `hsl(var(--${flow.color}))`;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
+      // Connection line with brand colors
+      const flowColor = flow.color === 'flow-primary' ? BRAND_COLORS.primary : 
+                       flow.color === 'flow-secondary' ? BRAND_COLORS.accent : 
+                       flow.color === 'flow-warning' ? BRAND_COLORS.warning :
+                       BRAND_COLORS.accent; // Default to accent color
+      ctx.strokeStyle = flowColor;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 4]);
       
       ctx.beginPath();
       ctx.moveTo(isInbound ? startX + 20 : endX - 20, y);
@@ -242,14 +268,14 @@ export class AnimationExporter {
       ctx.setLineDash([]);
       
       // Data type label
-      ctx.fillStyle = 'hsl(var(--foreground))';
-      ctx.font = 'bold 14px sans-serif';
+      ctx.fillStyle = BRAND_COLORS.foreground;
+      ctx.font = 'bold 14px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(flow.dataType, centerX, y - 10);
       
       // Protocol label
-      ctx.fillStyle = 'hsl(var(--accent))';
-      ctx.font = '12px sans-serif';
+      ctx.fillStyle = BRAND_COLORS.accent;
+      ctx.font = '12px Inter, sans-serif';
       ctx.fillText(flow.protocol, centerX, y + 20);
     });
   }
@@ -260,18 +286,18 @@ export class AnimationExporter {
     const hubX = startX + 20;
     const hubY = (height - hubHeight) / 2;
     
-    // Main hub container with gradient
+    // Main hub container with brand gradient
     const gradient = ctx.createLinearGradient(hubX, hubY, hubX + hubWidth, hubY + hubHeight);
-    gradient.addColorStop(0, 'hsl(var(--primary))');
-    gradient.addColorStop(1, 'hsl(var(--primary-foreground))');
+    gradient.addColorStop(0, BRAND_COLORS.primary);
+    gradient.addColorStop(1, BRAND_COLORS.primaryDark);
     ctx.fillStyle = gradient;
     
     this.roundedRect(ctx, hubX, hubY, hubWidth, hubHeight, 12);
     ctx.fill();
     
     // MaintainX title
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 20px sans-serif';
+    ctx.fillStyle = BRAND_COLORS.foreground;
+    ctx.font = 'bold 24px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('MaintainX', hubX + hubWidth / 2, hubY + 40);
     
@@ -293,20 +319,20 @@ export class AnimationExporter {
       const x = hubX + 20 + (col * (moduleWidth + moduleSpacing));
       const y = hubY + 80 + (row * (moduleHeight + moduleSpacing));
       
-      // Module container
-      ctx.fillStyle = module.active ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.1)';
+      // Module container with brand colors
+      ctx.fillStyle = module.active ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.1)';
       this.roundedRect(ctx, x, y, moduleWidth, moduleHeight, 8);
       ctx.fill();
       
       // Module name
-      ctx.fillStyle = 'white';
-      ctx.font = '12px sans-serif';
+      ctx.fillStyle = BRAND_COLORS.foreground;
+      ctx.font = '12px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(module.name, x + moduleWidth / 2, y + moduleHeight / 2 + 4);
       
       // Active indicator
       if (module.active) {
-        ctx.fillStyle = 'hsl(var(--accent))';
+        ctx.fillStyle = BRAND_COLORS.accent;
         ctx.beginPath();
         ctx.arc(x + moduleWidth - 10, y + 10, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -314,8 +340,8 @@ export class AnimationExporter {
     });
     
     // Active flows count
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.font = '12px sans-serif';
+    ctx.fillStyle = BRAND_COLORS.foreground;
+    ctx.font = '12px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(`${flows.length} Active Data Flows`, hubX + hubWidth / 2, hubY + hubHeight - 20);
   }
