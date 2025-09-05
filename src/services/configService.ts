@@ -330,6 +330,12 @@ export class ConfigService {
     localStorage.setItem(VERSIONS_KEY, JSON.stringify(versions));
   }
 
+  static createSnapshot(description: string = 'Manual Snapshot'): void {
+    const current = this.getLive();
+    this.saveVersion(current, description);
+    console.log('📸 Snapshot created:', description);
+  }
+
   static listVersions(): ConfigVersion[] {
     const stored = localStorage.getItem(VERSIONS_KEY);
     if (stored) {

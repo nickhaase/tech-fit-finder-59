@@ -32,6 +32,22 @@ export const VersionManager = ({ onConfigRestore }: VersionManagerProps) => {
     }
   };
 
+  const handleCreateSnapshot = () => {
+    try {
+      ConfigService.createSnapshot('Pre-Global-Brands Snapshot');
+      toast({
+        title: "Snapshot Created",
+        description: "Current configuration saved as 'Pre-Global-Brands Snapshot'."
+      });
+    } catch (error) {
+      toast({
+        title: "Snapshot Failed",
+        description: "Failed to create snapshot.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleExportVersion = (version: ConfigVersion) => {
     const blob = new Blob([JSON.stringify(version.config, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -55,8 +71,14 @@ export const VersionManager = ({ onConfigRestore }: VersionManagerProps) => {
           View and restore previous configuration versions. Last 20 versions are kept.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        {versions.length > 0 ? (
+        <CardContent>
+          <div className="flex justify-end mb-4">
+            <Button onClick={handleCreateSnapshot}>
+              <History className="w-4 h-4 mr-2" />
+              Create Snapshot
+            </Button>
+          </div>
+          {versions.length > 0 ? (
           <div className="space-y-3">
             {versions.map((version) => (
               <div

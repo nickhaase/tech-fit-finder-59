@@ -10,6 +10,7 @@ import { VersionManager } from '@/components/admin/VersionManager';
 import { SynonymManager } from '@/components/admin/SynonymManager';
 import { BulkImport } from '@/components/admin/BulkImport';
 import { AdminAuth } from '@/components/admin/AdminAuth';
+import { GlobalBrandManager } from '@/components/admin/GlobalBrandManager';
 import { Save, Eye, Zap, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -258,14 +259,19 @@ const Admin = () => {
         </Card>
 
         {/* Main Tabs */}
-        <Tabs defaultValue="sections" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs defaultValue="global-brands" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="global-brands">Global Brands</TabsTrigger>
             <TabsTrigger value="sections">Sections</TabsTrigger>
             <TabsTrigger value="synonyms">Synonyms</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Import</TabsTrigger>
             <TabsTrigger value="versions">Versions</TabsTrigger>
             <TabsTrigger value="copy">Copy</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="global-brands">
+            <GlobalBrandManager config={config} onConfigChange={handleConfigChange} />
+          </TabsContent>
 
           <TabsContent value="sections">
             <SectionManager config={config} onConfigChange={handleConfigChange} />

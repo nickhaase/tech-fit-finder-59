@@ -14,6 +14,18 @@ export interface BrandOption {
     };
   };
   state: 'active' | 'deprecated' | 'hidden';
+  globalId?: string; // Reference to global brand
+  assignedSections?: string[]; // Which sections this brand is assigned to
+}
+
+export interface GlobalBrand {
+  id: string;
+  name: string;
+  logo?: string;
+  synonyms: string[];
+  state: 'active' | 'deprecated' | 'hidden';
+  assignedSections: string[]; // Array of section IDs where this brand appears
+  sectionSpecificMeta?: Record<string, any>; // Section-specific metadata
 }
 
 export interface ConfigSection {
@@ -32,6 +44,7 @@ export interface AppConfig {
   updatedAt: string;
   sections: ConfigSection[];
   synonymMap: Record<string, string>;
+  globalBrands?: GlobalBrand[]; // Global brand library
   resultCopy: {
     headers: Record<string, string>;
     perBrand: {
