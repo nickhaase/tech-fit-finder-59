@@ -38,20 +38,26 @@ const SECTION_TO_CATEGORY_MAP: Record<string, Node['category']> = {
   'other_systems': 'Other'
 };
 
-// Category priority for layout ordering (lower = closer to hub)
+// ISA-95 Hierarchy ordering (lower = higher level)
 const CATEGORY_PRIORITY: Record<Node['category'], number> = {
+  // Level 4: Business (ERP)
   'ERP': 1,
+  // Level 3: Operations Management  
   'MES': 2,
-  'SCADA': 2,
-  'PLC': 2,
-  'Sensors': 3,
-  'Historian': 4,
-  'Inventory/WMS': 5,
-  'Workflow/ITSM/iPaaS': 6,
-  'Asset Tracking': 7,
-  'Legacy CMMS/EAM': 8,
-  'Construction': 9,
-  'Other': 10
+  'Inventory/WMS': 2,
+  'Legacy CMMS/EAM': 2,
+  // Level 2: Supervisory Control
+  'SCADA': 3,
+  'Workflow/ITSM/iPaaS': 3,
+  // Level 1: Automated Control
+  'PLC': 4,
+  // Level 0: Physical Process
+  'Sensors': 5,
+  'Historian': 5,
+  'Asset Tracking': 5,
+  // Other systems
+  'Construction': 6,
+  'Other': 6
 };
 
 // Default protocols by category

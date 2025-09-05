@@ -181,15 +181,15 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
             <div className="h-full flex items-center justify-center">
               <svg 
                 className="w-full h-full max-h-[400px]" 
-                viewBox="0 0 300 400" 
+                viewBox="0 0 320 400" 
                 style={{ zIndex: 1 }}
               >
                 {/* Connection lines */}
                 {activeFlows.map((flow, index) => {
                   const isInbound = flow.direction === 'inbound';
-                  const startX = isInbound ? 20 : 280;
-                  const endX = isInbound ? 280 : 20;
-                  const y = 150 + (index - activeFlows.length / 2) * 30;
+                  const startX = isInbound ? 20 : 300;
+                  const endX = isInbound ? 300 : 20;
+                  const y = 120 + (index * 40); // Better spacing between flows
                   
                   return (
                     <g key={flow.id}>
@@ -208,24 +208,24 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                       
                       {/* Data type label */}
                       <text
-                        x={150}
-                        y={y - 8}
+                        x={160}
+                        y={y - 10}
                         textAnchor="middle"
                         className="text-xs fill-muted-foreground font-medium"
                         opacity={getConnectionOpacity(flow.id)}
-                        style={{ fontSize: '10px' }}
+                        style={{ fontSize: '11px' }}
                       >
                         {flow.dataType}
                       </text>
                       
                       {/* Protocol label */}
                       <text
-                        x={150}
-                        y={y + 15}
+                        x={160}
+                        y={y + 18}
                         textAnchor="middle"
                         className="text-xs fill-accent font-medium"
                         opacity={getConnectionOpacity(flow.id)}
-                        style={{ fontSize: '9px' }}
+                        style={{ fontSize: '10px' }}
                       >
                         {flow.protocol}
                       </text>
@@ -246,8 +246,8 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                     key={`particle-${flow.id}`}
                     className={`absolute w-2 h-2 rounded-full ${particleColor} ${particleClass}`}
                     style={{
-                      left: isInbound ? '20px' : '280px',
-                      top: `${150 + (index - activeFlows.length / 2) * 30 - 4}px`,
+                      left: isInbound ? '20px' : '300px',
+                      top: `${120 + (index * 40) - 4}px`,
                       animationDelay: getDataParticleDelay(index),
                       animationDirection: isInbound ? 'normal' : 'reverse'
                     }}
@@ -303,7 +303,7 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                 {/* Data throughput indicator */}
                 <div className="mt-4 pt-3 border-t border-white/20">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="opacity-80">Data Throughput</span>
+                    <span className="opacity-80">{activeFlows.length} Active Data Flows</span>
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
                       <span className="font-medium">Live</span>
@@ -343,7 +343,10 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                 {hoveredSystem} Integration
               </div>
               <div className="text-xs text-muted-foreground">
-                Active data flows: {activeFlows.filter(f => f.from === hoveredSystem || f.to === hoveredSystem).length}
+                Active data flows: {activeFlows.filter(f => {
+                  const system = systems.find(s => s.name === hoveredSystem);
+                  return system && (f.from === system.id || f.to === system.id);
+                }).length}
               </div>
             </div>
           </div>
