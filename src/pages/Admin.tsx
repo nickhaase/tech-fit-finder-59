@@ -298,7 +298,7 @@ const Admin = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="taxonomy" className="w-full">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="taxonomy">Taxonomy</TabsTrigger>
             <TabsTrigger value="global-brands">Global Brands</TabsTrigger>
             <TabsTrigger value="sections">Sections</TabsTrigger>
@@ -307,6 +307,7 @@ const Admin = () => {
             <TabsTrigger value="import">Import</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Import</TabsTrigger>
             <TabsTrigger value="versions">Versions</TabsTrigger>
+            <TabsTrigger value="submissions">Submissions</TabsTrigger>
             <TabsTrigger value="copy">Copy</TabsTrigger>
           </TabsList>
 
