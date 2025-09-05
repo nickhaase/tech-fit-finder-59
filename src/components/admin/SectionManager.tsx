@@ -27,6 +27,13 @@ export const SectionManager = ({ config, onConfigChange }: SectionManagerProps) 
   };
 
   const handleSectionSelect = (sectionId: string, subcategoryId?: string) => {
+    console.log('🎯 Section selected:', sectionId, 'subcategory:', subcategoryId);
+    const section = config.sections.find(s => s.id === sectionId);
+    console.log('🎯 Found section:', section);
+    console.log('🎯 Section options length:', section?.options?.length);
+    if (section && sectionId === 'erp') {
+      console.log('🎯 ERP section options:', section.options);
+    }
     setSelectedSection(sectionId);
     setSelectedSubcategory(subcategoryId || null);
   };

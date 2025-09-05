@@ -28,6 +28,10 @@ export const OptionManager = ({
   onConfigUpdate, 
   subcategoryId 
 }: OptionManagerProps) => {
+  console.log('🔧 OptionManager received section:', section.id);
+  console.log('🔧 OptionManager section options:', section.options);
+  console.log('🔧 OptionManager section options length:', section.options?.length);
+  
   const [editingOption, setEditingOption] = useState<BrandOption | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showBrandSelector, setShowBrandSelector] = useState(false);
