@@ -230,17 +230,6 @@ const Admin = () => {
             <Badge variant={autoSaveEnabled ? "default" : "outline"} className="text-xs">
               Auto-save: {autoSaveEnabled ? "ON" : "OFF"}
             </Badge>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                console.log('🧹 Clearing localStorage and reloading...');
-                localStorage.clear();
-                window.location.reload();
-              }}
-            >
-              Clear Cache
-            </Button>
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Export

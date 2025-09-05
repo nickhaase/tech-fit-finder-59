@@ -11,11 +11,6 @@ import { DATA_ANALYTICS_CATEGORIES, CONNECTIVITY_EDGE_CATEGORY, RESULT_COPY_TEMP
 
 // Convert legacy data to new config format
 const createDefaultConfig = (): AppConfig => {
-  console.log('🔧 Creating default config...');
-  console.log('📦 ERP_SYSTEMS data:', ERP_SYSTEMS);
-  console.log('📦 ERP_SYSTEMS[0]:', ERP_SYSTEMS[0]);
-  console.log('📦 ERP_SYSTEMS[0].brands:', ERP_SYSTEMS[0]?.brands);
-  console.log('📦 ERP_SYSTEMS[0].brands length:', ERP_SYSTEMS[0]?.brands?.length);
 
   const sections = [
     {
@@ -25,7 +20,7 @@ const createDefaultConfig = (): AppConfig => {
       multi: false,
       systemOptions: ['None', 'Not sure'],
       options: (ERP_SYSTEMS[0]?.brands || []).map(brand => {
-        console.log('📦 Processing ERP brand:', brand);
+        
         return {
           id: brand.id,
           name: brand.name,
