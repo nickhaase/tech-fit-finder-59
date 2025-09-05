@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AppConfig, BrandOption, ConfigSection, GlobalBrand } from '@/types/config';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, AlertCircle, CheckCircle, Download, ExternalLink } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, Download, ExternalLink, Sparkles } from 'lucide-react';
 
 interface ImportManagerProps {
   config: AppConfig;
@@ -165,6 +165,7 @@ export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) =>
   const [unresolvedSelections, setUnresolvedSelections] = useState<Record<number, string>>({});
   const [allowFieldUpdates, setAllowFieldUpdates] = useState(false);
   const [confirmRelink, setConfirmRelink] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
   const convertGoogleSheetsUrl = (url: string): string => {
     if (url.includes('docs.google.com/spreadsheets')) {
@@ -853,24 +854,133 @@ export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) =>
     setLinkerPreview(preview);
   };
 
+  // Enhanced auto-suggestion with similarity scoring
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const a = normalize(str1);
+    const b = normalize(str2);
+    
+    // Exact match
+    if (a === b) return 1.0;
+    
+    // Contains match
+    if (a.includes(b) || b.includes(a)) return 0.8;
+    
+    // Simple Levenshtein-like scoring
+    const longer = a.length > b.length ? a : b;
+    const shorter = a.length > b.length ? b : a;
+    const editDistance = longer.length - shorter.length;
+    
+    if (editDistance === 0) {
+      let matches = 0;
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] === b[i]) matches++;
+      }
+      return matches / a.length;
+    }
+    
+    return Math.max(0, (longer.length - editDistance) / longer.length * 0.6);
+  };
+
+  const findBestGlobalBrandMatch = (parentBrand: string, productPlatform?: string) => {
+    if (!config.globalBrands || !parentBrand) return null;
+    
+    const searchTerms = [
+      parentBrand,
+      productPlatform,
+      `${parentBrand} ${productPlatform || ''}`.trim()
+    ].filter(Boolean);
+    
+    let bestMatch = null;
+    let bestScore = 0.7; // Minimum threshold
+    
+    config.globalBrands.forEach(brand => {
+      const candidateNames = [brand.name, ...brand.synonyms];
+      
+      searchTerms.forEach(term => {
+        candidateNames.forEach(candidate => {
+          const score = calculateSimilarity(term, candidate);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = { brand, score, matchedOn: candidate };
+          }
+        });
+      });
+    });
+    
+    return bestMatch;
+  };
+
   const autofillProposals = () => {
     if (!linkerParsed || !linkerPreview) return;
-    const normalizedIndex = new Map<string, string>();
-    (config.globalBrands || []).forEach(g => {
-      normalizedIndex.set(normalize(g.id), g.id);
-      normalizedIndex.set(normalize(g.name), g.id);
-    });
-
+    
     const newSelections: Record<number, string> = { ...unresolvedSelections };
+    let proposalCount = 0;
+    
     linkerPreview.unresolved.forEach((item: any) => {
       if (!newSelections[item.rowIndex] && item.parentBrand) {
-        const key = normalize(item.parentBrand);
-        if (normalizedIndex.has(key)) {
-          newSelections[item.rowIndex] = normalizedIndex.get(key)!;
+        const match = findBestGlobalBrandMatch(item.parentBrand, item.productPlatform);
+        if (match) {
+          newSelections[item.rowIndex] = match.brand.id;
+          proposalCount++;
         }
       }
     });
+    
     setUnresolvedSelections(newSelections);
+    toast({
+      title: "Smart Proposals Generated",
+      description: `Auto-filled ${proposalCount} smart proposals based on similarity matching`
+    });
+  };
+
+  // Bulk operations
+  const selectAllUnresolved = () => {
+    if (!linkerPreview) return;
+    setSelectedItems(new Set(
+      linkerPreview.unresolved.map((item: any) => item.rowIndex)
+    ));
+  };
+
+  const selectAllWithProposals = () => {
+    if (!linkerPreview) return;
+    setSelectedItems(new Set(
+      linkerPreview.unresolved
+        .filter((item: any) => unresolvedSelections[item.rowIndex])
+        .map((item: any) => item.rowIndex)
+    ));
+  };
+
+  const applyBulkGlobalBrand = (globalBrandId: string) => {
+    if (selectedItems.size === 0) return;
+    
+    const newSelections = { ...unresolvedSelections };
+    selectedItems.forEach(rowIndex => {
+      newSelections[rowIndex] = globalBrandId;
+    });
+    
+    setUnresolvedSelections(newSelections);
+    setSelectedItems(new Set());
+    toast({
+      title: "Bulk Applied",
+      description: `Applied global brand to ${selectedItems.size} items`
+    });
+  };
+
+  const acceptAllProposals = () => {
+    if (!linkerPreview) return;
+    // Proposals are already in unresolvedSelections, so this is effectively a no-op
+    // but we can show feedback
+    const proposalCount = linkerPreview.unresolved.filter((item: any) => 
+      unresolvedSelections[item.rowIndex]
+    ).length;
+    
+    if (proposalCount > 0) {
+      toast({
+        title: "Proposals Accepted",
+        description: `${proposalCount} proposals are ready to apply`
+      });
+    }
   };
 
   const publishLinkerChanges = () => {
@@ -1278,6 +1388,335 @@ export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) =>
                   <Button onClick={publishGlobalBrandChanges} className="w-full">
                     Publish Global Brands to Draft
                   </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="linker" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Link Existing Options to Global Brands</CardTitle>
+              <CardDescription>
+                Bulk link existing section options to global brands without recreating them
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Mode Selector */}
+              <div className="flex gap-2">
+                <Button 
+                  variant={linkerMode === 'paste' ? 'default' : 'outline'}
+                  onClick={() => setLinkerMode('paste')}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Paste CSV
+                </Button>
+                <Button 
+                  variant={linkerMode === 'url' ? 'default' : 'outline'}
+                  onClick={() => setLinkerMode('url')}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Google Sheet URL
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setLinkerText(SAMPLE_LINKER_CSV)}
+                >
+                  Sample CSV
+                </Button>
+              </div>
+
+              {linkerMode === 'paste' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="linker-csv">Linker CSV Data</Label>
+                  <Textarea
+                    id="linker-csv"
+                    placeholder="Paste your linker CSV data here..."
+                    value={linkerText}
+                    onChange={(e) => setLinkerText(e.target.value)}
+                    rows={10}
+                    className="font-mono text-sm"
+                    spellCheck={false}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="linker-url">Google Sheet URL</Label>
+                  <Input
+                    id="linker-url"
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                    value={linkerUrl}
+                    onChange={(e) => setLinkerUrl(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <Button onClick={handleLinkerParse} disabled={!linkerText && !linkerUrl}>
+                Parse Linker CSV
+              </Button>
+
+              {/* Column Mapping */}
+              {linkerParsed && (
+                <div className="space-y-4">
+                  <Separator />
+                  <h4 className="font-medium">Column Mapping</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {LINKER_COLUMNS.map(reqCol => (
+                      <div key={reqCol} className="space-y-2">
+                        <Label className="text-sm font-medium">
+                          {reqCol.charAt(0).toUpperCase() + reqCol.slice(1).replace(/([A-Z])/g, ' $1')}
+                        </Label>
+                        <Select 
+                          value={linkerMapping[reqCol] || ''} 
+                          onValueChange={(value) => 
+                            setLinkerMapping(prev => ({ ...prev, [reqCol]: value }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select column" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {linkerParsed.headers.map(header => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button onClick={generateLinkerPreview} disabled={!linkerMapping.slug}>
+                      Generate Preview
+                    </Button>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="allow-field-updates"
+                        checked={allowFieldUpdates}
+                        onCheckedChange={(checked) => setAllowFieldUpdates(checked === true)}
+                      />
+                      <Label htmlFor="allow-field-updates" className="text-sm">
+                        Allow field updates
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Linker Preview */}
+              {linkerPreview && (
+                <div className="space-y-4">
+                  <Separator />
+                  <h4 className="font-medium">Link Preview</h4>
+                  
+                  {/* Bulk Operations Panel */}
+                  <div className="space-y-4 mb-4">
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={autofillProposals}
+                        variant="outline"
+                        disabled={linkerPreview.unresolved.length === 0}
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Smart Autofill ({linkerPreview.unresolved.length})
+                      </Button>
+                      
+                      <Button 
+                        onClick={acceptAllProposals}
+                        variant="outline"
+                        disabled={linkerPreview.unresolved.filter((item: any) => unresolvedSelections[item.rowIndex]).length === 0}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Accept All Proposals ({linkerPreview.unresolved.filter((item: any) => unresolvedSelections[item.rowIndex]).length})
+                      </Button>
+                      
+                      <Button 
+                        onClick={publishLinkerChanges}
+                        disabled={linkerPreview.toLink.length + Object.keys(unresolvedSelections).length + linkerPreview.unlinked.length === 0}
+                      >
+                        Apply Links ({linkerPreview.toLink.length + Object.keys(unresolvedSelections).length + linkerPreview.unlinked.length})
+                      </Button>
+                    </div>
+
+                    {selectedItems.size > 0 && (
+                      <div className="flex gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                        <span className="text-sm font-medium">
+                          {selectedItems.size} items selected
+                        </span>
+                        <div className="flex gap-2 ml-auto">
+                          <Select onValueChange={applyBulkGlobalBrand}>
+                            <SelectTrigger className="w-40">
+                              <SelectValue placeholder="Apply Global Brand" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(config.globalBrands || []).map(brand => (
+                                <SelectItem key={brand.id} value={brand.id}>
+                                  {brand.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button 
+                            onClick={() => setSelectedItems(new Set())}
+                            variant="outline"
+                            size="sm"
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 text-sm">
+                      <Button 
+                        onClick={selectAllUnresolved}
+                        variant="ghost"
+                        size="sm"
+                        disabled={linkerPreview.unresolved.length === 0}
+                      >
+                        Select All Unresolved ({linkerPreview.unresolved.length})
+                      </Button>
+                      <Button 
+                        onClick={selectAllWithProposals}
+                        variant="ghost"
+                        size="sm"
+                        disabled={linkerPreview.unresolved.filter((item: any) => unresolvedSelections[item.rowIndex]).length === 0}
+                      >
+                        Select All With Proposals ({linkerPreview.unresolved.filter((item: any) => unresolvedSelections[item.rowIndex]).length})
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Results Summary */}
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
+                    <div className="text-center p-3 bg-green-50 dark:bg-green-950 rounded">
+                      <div className="text-2xl font-bold text-green-600">{linkerPreview.toLink.length}</div>
+                      <div className="text-sm text-muted-foreground">To Link</div>
+                    </div>
+                    <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-950 rounded">
+                      <div className="text-2xl font-bold text-yellow-600">{linkerPreview.reLinked.length}</div>
+                      <div className="text-sm text-muted-foreground">Re-link</div>
+                    </div>
+                    <div className="text-center p-3 bg-red-50 dark:bg-red-950 rounded">
+                      <div className="text-2xl font-bold text-red-600">{linkerPreview.unlinked.length}</div>
+                      <div className="text-sm text-muted-foreground">Unlink</div>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-950 rounded">
+                      <div className="text-2xl font-bold text-gray-600">{linkerPreview.noOp.length}</div>
+                      <div className="text-sm text-muted-foreground">No Change</div>
+                    </div>
+                    <div className="text-center p-3 bg-orange-50 dark:bg-orange-950 rounded">
+                      <div className="text-2xl font-bold text-orange-600">{linkerPreview.unresolved.length}</div>
+                      <div className="text-sm text-muted-foreground">Unresolved</div>
+                    </div>
+                    <div className="text-center p-3 bg-blue-50 dark:bg-blue-950 rounded">
+                      <div className="text-2xl font-bold text-blue-600">{linkerPreview.skipped.length}</div>
+                      <div className="text-sm text-muted-foreground">Skipped</div>
+                    </div>
+                  </div>
+
+                  {/* Conflicts Warning */}
+                  {linkerPreview.reLinked.length > 0 && (
+                    <div className="flex items-center space-x-2 p-3 bg-yellow-50 dark:bg-yellow-950 rounded">
+                      <Checkbox 
+                        id="confirm-relink"
+                        checked={confirmRelink}
+                        onCheckedChange={(checked) => setConfirmRelink(checked === true)}
+                      />
+                      <Label htmlFor="confirm-relink" className="text-sm">
+                        Confirm re-linking {linkerPreview.reLinked.length} items with conflicts
+                      </Label>
+                    </div>
+                  )}
+
+                  {/* Detailed View */}
+                  <div className="max-h-96 overflow-y-auto border rounded">
+                    <div className="divide-y">
+                      {/* Unresolved Items */}
+                      {linkerPreview.unresolved.map((item: any, index: number) => (
+                        <div key={`unresolved-${index}`} className="p-4 bg-orange-50 dark:bg-orange-950">
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedItems.has(item.rowIndex)}
+                              onCheckedChange={(checked) => {
+                                const newSelected = new Set(selectedItems);
+                                if (checked) {
+                                  newSelected.add(item.rowIndex);
+                                } else {
+                                  newSelected.delete(item.rowIndex);
+                                }
+                                setSelectedItems(newSelected);
+                              }}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary">Unresolved</Badge>
+                                <span className="font-mono text-sm">{item.slug}</span>
+                                {item.parentBrand && (
+                                  <span className="text-sm text-muted-foreground">
+                                    ({item.parentBrand})
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1">{item.reason}</p>
+                            </div>
+                            <Select 
+                              value={unresolvedSelections[item.rowIndex] || ''} 
+                              onValueChange={(value) => setUnresolvedSelections(prev => ({ ...prev, [item.rowIndex]: value }))}
+                            >
+                              <SelectTrigger className="w-48">
+                                <SelectValue placeholder="Select global brand" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(config.globalBrands || []).map(brand => (
+                                  <SelectItem key={brand.id} value={brand.id}>
+                                    {brand.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Other Status Items */}
+                      {[
+                        { items: linkerPreview.toLink, status: 'To Link', bgClass: 'bg-green-50 dark:bg-green-950' },
+                        { items: linkerPreview.reLinked, status: 'Re-link', bgClass: 'bg-yellow-50 dark:bg-yellow-950' },
+                        { items: linkerPreview.unlinked, status: 'Unlink', bgClass: 'bg-red-50 dark:bg-red-950' },
+                        { items: linkerPreview.noOp, status: 'No Change', bgClass: 'bg-gray-50 dark:bg-gray-950' },
+                        { items: linkerPreview.skipped, status: 'Skipped', bgClass: 'bg-blue-50 dark:bg-blue-950' }
+                      ].map(({ items, status, bgClass }) => 
+                        items.map((item: any, index: number) => (
+                          <div key={`${status}-${index}`} className={`p-4 ${bgClass}`}>
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline">{status}</Badge>
+                              <span className="font-mono text-sm">{item.slug}</span>
+                              {item.to && (
+                                <span className="text-sm text-muted-foreground">
+                                  → {(config.globalBrands || []).find(b => b.id === item.to)?.name || item.to}
+                                </span>
+                              )}
+                              {item.from && item.to && (
+                                <span className="text-sm text-muted-foreground">
+                                  {(config.globalBrands || []).find(b => b.id === item.from)?.name || item.from} → {(config.globalBrands || []).find(b => b.id === item.to)?.name || item.to}
+                                </span>
+                              )}
+                              {item.reason && (
+                                <span className="text-sm text-muted-foreground">
+                                  ({item.reason})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
