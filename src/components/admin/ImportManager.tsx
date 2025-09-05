@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AppConfig, BrandOption, ConfigSection, GlobalBrand } from '@/types/config';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, AlertCircle, CheckCircle, Download, ExternalLink } from 'lucide-react';
@@ -113,6 +114,20 @@ const GLOBAL_BRAND_REQUIRED_COLUMNS = [
   'notes'
 ];
 
+// Linker CSV (for linking existing options to global brands)
+const SAMPLE_LINKER_CSV = `Slug,Global Brand ID,Link to Global Brand,Parent Brand,Product / Platform
+ignition,inductive-automation,true,Inductive Automation,Ignition
+pi-system,aveva,true,AVEVA,PI System (formerly OSIsoft)
+custom-solution,,false,,Custom Solution`;
+
+const LINKER_COLUMNS = [
+  'slug',
+  'globalBrandId',
+  'linkToGlobalBrand',
+  'parentBrand',
+  'productPlatform'
+];
+
 export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) => {
   const { toast } = useToast();
   
@@ -139,6 +154,17 @@ export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) =>
   const [globalBrandParsed, setGlobalBrandParsed] = useState<ParsedCSV | null>(null);
   const [globalBrandMapping, setGlobalBrandMapping] = useState<ColumnMapping>({});
   const [globalBrandDiff, setGlobalBrandDiff] = useState<GlobalBrandDiff | null>(null);
+
+  // Linker CSV State (link existing options to global brands)
+  const [linkerMode, setLinkerMode] = useState<'paste' | 'url'>('paste');
+  const [linkerText, setLinkerText] = useState('');
+  const [linkerUrl, setLinkerUrl] = useState('');
+  const [linkerParsed, setLinkerParsed] = useState<ParsedCSV | null>(null);
+  const [linkerMapping, setLinkerMapping] = useState<ColumnMapping>({});
+  const [linkerPreview, setLinkerPreview] = useState<any | null>(null);
+  const [unresolvedSelections, setUnresolvedSelections] = useState<Record<number, string>>({});
+  const [allowFieldUpdates, setAllowFieldUpdates] = useState(false);
+  const [confirmRelink, setConfirmRelink] = useState(false);
 
   const convertGoogleSheetsUrl = (url: string): string => {
     if (url.includes('docs.google.com/spreadsheets')) {
@@ -700,6 +726,229 @@ export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) =>
     }
   };
 
+  // Helpers for Linker CSV
+  const normalize = (s?: string) => (s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const toBool = (v?: string) => (v || '').toString().trim().toLowerCase() === 'true';
+
+  const handleLinkerParse = async () => {
+    try {
+      let csvText = linkerText;
+      if (linkerMode === 'url') {
+        const url = convertGoogleSheetsUrl(linkerUrl);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch CSV from URL');
+        csvText = await response.text();
+      }
+      const parsed = parseCSV(csvText);
+      setLinkerParsed(parsed);
+
+      const mapping: ColumnMapping = {};
+      LINKER_COLUMNS.forEach(reqCol => {
+        const found = parsed.headers.find(h => 
+          h.toLowerCase().replace(/[^a-z]/g, '') === reqCol.toLowerCase().replace(/[^a-z]/g, '')
+        );
+        if (found) mapping[reqCol] = found;
+      });
+      setLinkerMapping(mapping);
+
+      setLinkerPreview(null);
+      setUnresolvedSelections({});
+      setConfirmRelink(false);
+      toast({ title: 'CSV Parsed', description: `Found ${parsed.rows.length} rows` });
+    } catch (error) {
+      toast({ title: 'Parse Failed', description: error instanceof Error ? error.message : 'Failed to parse CSV', variant: 'destructive' });
+    }
+  };
+
+  const generateLinkerPreview = () => {
+    if (!linkerParsed) return;
+
+    // Index options by slug
+    const optionIndex = new Map<string, { sectionId: string; subcategoryId?: string; option: BrandOption }>();
+    config.sections.forEach(section => {
+      section.options?.forEach(opt => optionIndex.set(opt.id, { sectionId: section.id, option: opt }));
+      section.subcategories?.forEach(sub => {
+        sub.options?.forEach(opt => optionIndex.set(opt.id, { sectionId: section.id, subcategoryId: sub.id, option: opt }));
+      });
+    });
+
+    // Index global brands
+    const globalMap = new Map<string, GlobalBrand>();
+    const normalizedIndex = new Map<string, string>();
+    (config.globalBrands || []).forEach(g => {
+      globalMap.set(g.id, g);
+      normalizedIndex.set(normalize(g.id), g.id);
+      normalizedIndex.set(normalize(g.name), g.id);
+    });
+
+    const preview = {
+      toLink: [] as any[],
+      reLinked: [] as any[],
+      unlinked: [] as any[],
+      noOp: [] as any[],
+      skipped: [] as any[],
+      unresolved: [] as any[]
+    };
+
+    linkerParsed.rows.forEach((row, rowIndex) => {
+      const rowData: Record<string, string> = {};
+      Object.entries(linkerMapping).forEach(([reqCol, csvHeader]) => {
+        const colIndex = linkerParsed.headers.indexOf(csvHeader);
+        if (colIndex >= 0) rowData[reqCol] = row[colIndex] || '';
+      });
+
+      const slug = (rowData.slug || '').trim();
+      if (!slug) {
+        preview.skipped.push({ rowIndex, reason: 'Missing slug' });
+        return;
+      }
+
+      const optInfo = optionIndex.get(slug);
+      if (!optInfo) {
+        preview.skipped.push({ rowIndex, slug, reason: 'Slug not found' });
+        return;
+      }
+
+      const linkFlag = toBool(rowData.linkToGlobalBrand);
+      const parentBrand = rowData.parentBrand || '';
+      let targetId = (rowData.globalBrandId || '').trim();
+
+      if (linkFlag) {
+        // Resolve target global brand id
+        let resolvedId: string | null = null;
+        if (targetId && globalMap.has(targetId)) {
+          resolvedId = targetId;
+        } else {
+          const pb = normalize(parentBrand);
+          if (pb && normalizedIndex.has(pb)) {
+            resolvedId = normalizedIndex.get(pb)!;
+          }
+        }
+
+        if (!resolvedId) {
+          preview.unresolved.push({ rowIndex, slug, parentBrand, reason: targetId ? 'Global Brand ID not found' : 'Missing Global Brand ID' });
+          return;
+        }
+
+        // Determine action
+        const currentId = optInfo.option.globalId;
+        const isLinked = !!optInfo.option.isLinkedToGlobal;
+        if (isLinked && currentId === resolvedId) {
+          preview.noOp.push({ rowIndex, slug, currentId });
+        } else if (isLinked && currentId && currentId !== resolvedId) {
+          preview.reLinked.push({ rowIndex, slug, from: currentId, to: resolvedId, conflict: true });
+        } else {
+          preview.toLink.push({ rowIndex, slug, to: resolvedId });
+        }
+      } else {
+        // Unlink requested
+        if (optInfo.option.isLinkedToGlobal) {
+          preview.unlinked.push({ rowIndex, slug });
+        } else {
+          preview.noOp.push({ rowIndex, slug });
+        }
+      }
+    });
+
+    setLinkerPreview(preview);
+  };
+
+  const autofillProposals = () => {
+    if (!linkerParsed || !linkerPreview) return;
+    const normalizedIndex = new Map<string, string>();
+    (config.globalBrands || []).forEach(g => {
+      normalizedIndex.set(normalize(g.id), g.id);
+      normalizedIndex.set(normalize(g.name), g.id);
+    });
+
+    const newSelections: Record<number, string> = { ...unresolvedSelections };
+    linkerPreview.unresolved.forEach((item: any) => {
+      if (!newSelections[item.rowIndex] && item.parentBrand) {
+        const key = normalize(item.parentBrand);
+        if (normalizedIndex.has(key)) {
+          newSelections[item.rowIndex] = normalizedIndex.get(key)!;
+        }
+      }
+    });
+    setUnresolvedSelections(newSelections);
+  };
+
+  const publishLinkerChanges = () => {
+    if (!linkerPreview || !linkerParsed) return;
+
+    // Validate unresolved mappings
+    const missing = (linkerPreview.unresolved as any[]).filter(u => !unresolvedSelections[u.rowIndex]);
+    if (missing.length > 0) {
+      toast({ title: 'Unresolved Brands', description: 'Please resolve all unresolved rows before applying.', variant: 'destructive' });
+      return;
+    }
+
+    // Validate conflicts
+    if ((linkerPreview.reLinked as any[]).length > 0 && !confirmRelink) {
+      toast({ title: 'Confirmation Required', description: 'Please confirm re-linking conflicting items.', variant: 'destructive' });
+      return;
+    }
+
+    const newConfig = { ...config };
+
+    // Build a mutable index to update options in-place
+    const optionIndex = new Map<string, { option: BrandOption }>();
+    newConfig.sections.forEach(section => {
+      section.options?.forEach((opt, i) => optionIndex.set(opt.id, { option: section.options![i] }));
+      section.subcategories?.forEach(sub => {
+        sub.options?.forEach((opt, i) => optionIndex.set(opt.id, { option: sub.options![i] }));
+      });
+    });
+
+    const applyLink = (slug: string, globalId: string, rowIndex?: number) => {
+      const ref = optionIndex.get(slug);
+      if (!ref) return;
+      ref.option.globalId = globalId;
+      ref.option.isLinkedToGlobal = true;
+      if (allowFieldUpdates && linkerMapping['productPlatform']) {
+        const header = linkerMapping['productPlatform'];
+        const colIndex = linkerParsed.headers.indexOf(header);
+        if (rowIndex !== undefined && colIndex >= 0) {
+          const val = linkerParsed.rows[rowIndex][colIndex];
+          if (val) ref.option.name = val;
+        }
+      }
+    };
+
+    const applyUnlink = (slug: string) => {
+      const ref = optionIndex.get(slug);
+      if (!ref) return;
+      ref.option.globalId = undefined;
+      ref.option.isLinkedToGlobal = false;
+    };
+
+    // Apply actions
+    (linkerPreview.toLink as any[]).forEach(item => applyLink(item.slug, item.to, item.rowIndex));
+    (linkerPreview.unlinked as any[]).forEach(item => applyUnlink(item.slug));
+    (linkerPreview.reLinked as any[]).forEach(item => {
+      if (confirmRelink) applyLink(item.slug, item.to, item.rowIndex);
+    });
+    (linkerPreview.unresolved as any[]).forEach(item => {
+      const mappedId = unresolvedSelections[item.rowIndex];
+      if (mappedId) applyLink(item.slug, mappedId, item.rowIndex);
+    });
+
+    onConfigChange(newConfig);
+
+    toast({
+      title: 'Linker Applied to Draft',
+      description: `Linked ${linkerPreview.toLink.length + linkerPreview.unresolved.length} • Re-linked ${linkerPreview.reLinked.length} • Unlinked ${linkerPreview.unlinked.length} • No-op ${linkerPreview.noOp.length} • Skipped ${linkerPreview.skipped.length}`
+    });
+
+    // Reset state
+    setLinkerPreview(null);
+    setLinkerParsed(null);
+    setLinkerText('');
+    setLinkerUrl('');
+    setUnresolvedSelections({});
+    setConfirmRelink(false);
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -715,9 +964,10 @@ export const ImportManager = ({ config, onConfigChange }: ImportManagerProps) =>
       </Card>
 
       <Tabs defaultValue="catalog" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="catalog">Section Brands</TabsTrigger>
           <TabsTrigger value="global-brands">Global Brands</TabsTrigger>
+          <TabsTrigger value="linker">Link Existing</TabsTrigger>
           <TabsTrigger value="synonyms">Synonyms</TabsTrigger>
         </TabsList>
 
