@@ -23,7 +23,8 @@ import {
   Building,
   Shield,
   RefreshCw,
-  Bug
+  Bug,
+  X
 } from "lucide-react";
 
 import { BrandPicker } from "@/components/BrandPicker";
@@ -213,6 +214,9 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   const [timeline, setTimeline] = useState('');
   const [stakeholder, setStakeholder] = useState('');
   
+  // Section skip state
+  const [skippedSections, setSkippedSections] = useState<Set<string>>(new Set());
+  
   // Modal state
   const [showBrandPicker, setShowBrandPicker] = useState<{
     category: any;
@@ -232,10 +236,10 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   const canProceed = () => {
     switch (currentStep) {
       case 0: return true; // Mode selection
-      case 1: return erp !== null || sensorsMonitoring.length > 0 || automationScada.length > 0 || otherSystems.length > 0;
-      case 2: return sensorsMonitoring.length > 0 || hasNoneOrNotSure(sensorsMonitoring);
-      case 3: return automationScada.length > 0 || hasNoneOrNotSure(automationScada);
-      case 4: return otherSystems.length > 0 || hasNoneOrNotSure(otherSystems);
+      case 1: return erp !== null || sensorsMonitoring.length > 0 || automationScada.length > 0 || otherSystems.length > 0 || skippedSections.has('erp');
+      case 2: return sensorsMonitoring.length > 0 || hasNoneOrNotSure(sensorsMonitoring) || skippedSections.has('sensors');
+      case 3: return automationScada.length > 0 || hasNoneOrNotSure(automationScada) || skippedSections.has('automation');
+      case 4: return otherSystems.length > 0 || hasNoneOrNotSure(otherSystems) || skippedSections.has('other');
       case 5: return companySize !== '';
       case 6: return industry !== '';
       case 7: return goals.length > 0;
@@ -246,6 +250,34 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
 
   const hasNoneOrNotSure = (systems: any[]) => {
     return systems.some(s => s.brand === 'None' || s.brand === 'Not sure');
+  };
+
+  const handleSkipSection = (sectionId: string) => {
+    setSkippedSections(prev => new Set(prev).add(sectionId));
+    
+    // Clear any existing selections for the skipped section
+    switch (sectionId) {
+      case 'erp':
+        setErp(null);
+        break;
+      case 'sensors':
+        setSensorsMonitoring([]);
+        break;
+      case 'automation':
+        setAutomationScada([]);
+        break;
+      case 'other':
+        setOtherSystems([]);
+        break;
+    }
+  };
+
+  const handleUnskipSection = (sectionId: string) => {
+    setSkippedSections(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sectionId);
+      return newSet;
+    });
   };
 
   const handleComplete = () => {
@@ -511,25 +543,58 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
             </div>
             
             <div className="grid md:grid-cols-1 gap-4">
-              <Card
-                className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft border-dashed"
-                onClick={() => handleBrandSelection(config.sections.find(s => s.id === 'erp'), 'erp')}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold mb-1">Select ERP System</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Choose your enterprise resource planning system
-                    </p>
-                    {erp && (
-                      <Badge variant="secondary" className="mt-2">
-                        {erp.brand}
-                      </Badge>
-                    )}
+              {skippedSections.has('erp') ? (
+                <Card className="p-4 border-dashed bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold mb-1 text-muted-foreground">ERP Section Skipped</h4>
+                      <p className="text-sm text-muted-foreground">
+                        You've indicated this section is not applicable
+                      </p>
+                      <Badge variant="outline" className="mt-2">N/A</Badge>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUnskipSection('erp')}
+                    >
+                      Undo Skip
+                    </Button>
                   </div>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground" />
-                </div>
-              </Card>
+                </Card>
+              ) : (
+                <>
+                  <Card
+                    className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft border-dashed"
+                    onClick={() => handleBrandSelection(config.sections.find(s => s.id === 'erp'), 'erp')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold mb-1">Select ERP System</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Choose your enterprise resource planning system
+                        </p>
+                        {erp && (
+                          <Badge variant="secondary" className="mt-2">
+                            {erp.brand}
+                          </Badge>
+                        )}
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  </Card>
+                  
+                  <Card
+                    className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft border-dashed border-muted-foreground/30 bg-muted/10"
+                    onClick={() => handleSkipSection('erp')}
+                  >
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                      <X className="w-4 h-4" />
+                      <span className="text-sm font-medium">Skip - We don't use ERP systems</span>
+                    </div>
+                  </Card>
+                </>
+              )}
             </div>
           </div>
         );
@@ -545,35 +610,69 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
               <p className="text-muted-foreground">What sensors and monitoring equipment do you use?</p>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-4">
-              {config.sections.find(s => s.id === 'sensors_monitoring')?.subcategories?.map((category) => (
-                <Card
-                  key={category.id}
-                  className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
-                  onClick={() => handleBrandSelection(category, 'sensors', category.label)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold mb-1">{category.label}</h4>
-                      <p className="text-sm text-muted-foreground">{category.description}</p>
-                      {sensorsMonitoring.filter(s => s.category === category.label).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {sensorsMonitoring
-                            .filter(s => s.category === category.label)
-                            .slice(0, 3)
-                            .map((sensor, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                {sensor.brand}
-                              </Badge>
-                            ))}
+            {skippedSections.has('sensors') ? (
+              <Card className="p-6 border-dashed bg-muted/30 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <X className="w-5 h-5 text-muted-foreground" />
+                    <h4 className="font-semibold text-muted-foreground">Sensors & Monitoring Section Skipped</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    You've indicated this section is not applicable to your operations
+                  </p>
+                  <Badge variant="outline">N/A</Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUnskipSection('sensors')}
+                  >
+                    Undo Skip
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  {config.sections.find(s => s.id === 'sensors_monitoring')?.subcategories?.map((category) => (
+                    <Card
+                      key={category.id}
+                      className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
+                      onClick={() => handleBrandSelection(category, 'sensors', category.label)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold mb-1">{category.label}</h4>
+                          <p className="text-sm text-muted-foreground">{category.description}</p>
+                          {sensorsMonitoring.filter(s => s.category === category.label).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {sensorsMonitoring
+                                .filter(s => s.category === category.label)
+                                .slice(0, 3)
+                                .map((sensor, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {sensor.brand}
+                                  </Badge>
+                                ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                        <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                
+                <Card
+                  className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft border-dashed border-muted-foreground/30 bg-muted/10"
+                  onClick={() => handleSkipSection('sensors')}
+                >
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <X className="w-4 h-4" />
+                    <span className="text-sm font-medium">Skip - We don't use sensors or monitoring equipment</span>
                   </div>
                 </Card>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         );
 
@@ -588,35 +687,69 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
               <p className="text-muted-foreground">Select your automation and control systems</p>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-4">
-              {config.sections.find(s => s.id === 'automation_scada')?.subcategories?.map((category) => (
-                <Card
-                  key={category.id}
-                  className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
-                  onClick={() => handleBrandSelection(category, 'automation', category.label)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold mb-1">{category.label}</h4>
-                      <p className="text-sm text-muted-foreground">{category.description}</p>
-                      {automationScada.filter(a => a.type === category.label).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {automationScada
-                            .filter(a => a.type === category.label)
-                            .slice(0, 3)
-                            .map((automation, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                {automation.brand}
-                              </Badge>
-                            ))}
+            {skippedSections.has('automation') ? (
+              <Card className="p-6 border-dashed bg-muted/30 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <X className="w-5 h-5 text-muted-foreground" />
+                    <h4 className="font-semibold text-muted-foreground">Automation & SCADA Section Skipped</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    You've indicated this section is not applicable to your operations
+                  </p>
+                  <Badge variant="outline">N/A</Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUnskipSection('automation')}
+                  >
+                    Undo Skip
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  {config.sections.find(s => s.id === 'automation_scada')?.subcategories?.map((category) => (
+                    <Card
+                      key={category.id}
+                      className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
+                      onClick={() => handleBrandSelection(category, 'automation', category.label)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold mb-1">{category.label}</h4>
+                          <p className="text-sm text-muted-foreground">{category.description}</p>
+                          {automationScada.filter(a => a.type === category.label).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {automationScada
+                                .filter(a => a.type === category.label)
+                                .slice(0, 3)
+                                .map((automation, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {automation.brand}
+                                  </Badge>
+                                ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                        <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                
+                <Card
+                  className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft border-dashed border-muted-foreground/30 bg-muted/10"
+                  onClick={() => handleSkipSection('automation')}
+                >
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <X className="w-4 h-4" />
+                    <span className="text-sm font-medium">Skip - We don't use automation or SCADA systems</span>
                   </div>
                 </Card>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         );
 
@@ -631,35 +764,69 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
               <p className="text-muted-foreground">Additional maintenance and asset management tools</p>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-4">
-              {config.sections.find(s => s.id === 'other_systems')?.subcategories?.map((category) => (
-                <Card
-                  key={category.id}
-                  className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
-                  onClick={() => handleBrandSelection(category, 'other', category.label)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold mb-1">{category.label}</h4>
-                      <p className="text-sm text-muted-foreground">{category.description}</p>
-                      {otherSystems.filter(o => o.type === category.label).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {otherSystems
-                            .filter(o => o.type === category.label)
-                            .slice(0, 3)
-                            .map((other, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                {other.brand}
-                              </Badge>
-                            ))}
+            {skippedSections.has('other') ? (
+              <Card className="p-6 border-dashed bg-muted/30 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <X className="w-5 h-5 text-muted-foreground" />
+                    <h4 className="font-semibold text-muted-foreground">Other Systems Section Skipped</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    You've indicated this section is not applicable to your operations
+                  </p>
+                  <Badge variant="outline">N/A</Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUnskipSection('other')}
+                  >
+                    Undo Skip
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  {config.sections.find(s => s.id === 'other_systems')?.subcategories?.map((category) => (
+                    <Card
+                      key={category.id}
+                      className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
+                      onClick={() => handleBrandSelection(category, 'other', category.label)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold mb-1">{category.label}</h4>
+                          <p className="text-sm text-muted-foreground">{category.description}</p>
+                          {otherSystems.filter(o => o.type === category.label).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {otherSystems
+                                .filter(o => o.type === category.label)
+                                .slice(0, 3)
+                                .map((other, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {other.brand}
+                                  </Badge>
+                                ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                        <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                
+                <Card
+                  className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft border-dashed border-muted-foreground/30 bg-muted/10"
+                  onClick={() => handleSkipSection('other')}
+                >
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <X className="w-4 h-4" />
+                    <span className="text-sm font-medium">Skip - We don't use these other systems</span>
                   </div>
                 </Card>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         );
 
