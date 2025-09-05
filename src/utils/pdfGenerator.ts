@@ -94,7 +94,7 @@ export const generateAssessmentReport = async (data: AssessmentData, appConfig?:
   
   // === NEW PAGE: INTEGRATION ARCHITECTURE ===
   pdf.addPage();
-  yPosition = 60;
+  yPosition = 80;
   
   // Page header
   pdf.setFillColor(36, 108, 255);
@@ -109,12 +109,19 @@ export const generateAssessmentReport = async (data: AssessmentData, appConfig?:
     try {
       const flowRenderer = new StaticFlowRenderer();
       const nodes = mapConfigToNodes(appConfig, data);
-      const diagramDataUrl = await flowRenderer.generateStaticFlowDiagram(nodes, 600, 400);
+      const diagramDataUrl = await flowRenderer.generateStaticFlowDiagram(nodes, 680, 380);
       
-      // Add diagram to PDF
+      // Add diagram to PDF with proper centering
       const imgData = diagramDataUrl.split(',')[1]; // Remove data:image/png;base64, prefix
-      pdf.addImage(imgData, 'PNG', 60, yPosition, 600, 400);
-      yPosition += 420;
+      const imgX = (pageWidth - 680) / 2; // Center the image
+      pdf.addImage(imgData, 'PNG', imgX, yPosition, 680, 380);
+      yPosition += 420; // Move past the diagram
+      
+      // Check if we need a new page
+      if (yPosition > pageHeight - 200) {
+        pdf.addPage();
+        yPosition = 60;
+      }
     } catch (error) {
       console.warn('Could not generate flow diagram:', error);
       // Fallback text
@@ -127,18 +134,33 @@ export const generateAssessmentReport = async (data: AssessmentData, appConfig?:
   }
   
   // === TECHNOLOGY ECOSYSTEM ===
+  // Ensure proper spacing before this section
+  yPosition += 30;
+  
   pdf.setTextColor(0, 30, 64); // Hydraulic Blue
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(20);
   pdf.text('Your Technology Ecosystem', 60, yPosition);
-  yPosition += 35;
+  yPosition += 40;
   
   pdf.setTextColor(55, 65, 81);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(12);
   
+  // Helper function to check page space and add new page if needed
+  const checkPageSpace = (requiredSpace: number) => {
+    if (yPosition + requiredSpace > pageHeight - 60) {
+      pdf.addPage();
+      yPosition = 60;
+      return true;
+    }
+    return false;
+  };
+  
   // ERP Systems
   if (data.integrations.erp) {
+    checkPageSpace(80);
+    
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
     pdf.setTextColor(36, 108, 255);
@@ -149,53 +171,67 @@ export const generateAssessmentReport = async (data: AssessmentData, appConfig?:
     pdf.setFontSize(12);
     pdf.setTextColor(55, 65, 81);
     pdf.text(`• ${data.integrations.erp.brand}`, 80, yPosition);
+    yPosition += 18;
+    
     if (data.integrations.erp.environment) {
-      pdf.text(`  Environment: ${data.integrations.erp.environment}`, 100, yPosition + 15);
-      yPosition += 15;
+      pdf.text(`  Environment: ${data.integrations.erp.environment}`, 100, yPosition);
+      yPosition += 18;
     }
-    yPosition += 25;
+    yPosition += 20;
   }
   
   // Sensors & Monitoring
   if (data.integrations.sensorsMonitoring.length > 0) {
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(16);
-    pdf.setTextColor(46, 216, 136); // Safety Green
-    pdf.text('Sensors & Monitoring Systems', 60, yPosition);
-    yPosition += 25;
+    const activeSensors = data.integrations.sensorsMonitoring.filter(
+      sensor => sensor.brand !== 'None' && sensor.brand !== 'Not sure'
+    );
     
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
-    pdf.setTextColor(55, 65, 81);
-    
-    data.integrations.sensorsMonitoring.forEach(sensor => {
-      if (sensor.brand !== 'None' && sensor.brand !== 'Not sure') {
+    if (activeSensors.length > 0) {
+      checkPageSpace(60 + (activeSensors.length * 20));
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.setTextColor(46, 216, 136); // Safety Green
+      pdf.text('Sensors & Monitoring Systems', 60, yPosition);
+      yPosition += 25;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(12);
+      pdf.setTextColor(55, 65, 81);
+      
+      activeSensors.forEach(sensor => {
         pdf.text(`• ${sensor.brand} (${sensor.category})`, 80, yPosition);
         yPosition += 18;
-      }
-    });
-    yPosition += 10;
+      });
+      yPosition += 20;
+    }
   }
   
   // Automation & SCADA
   if (data.integrations.automationScada.length > 0) {
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(16);
-    pdf.setTextColor(255, 169, 69); // Safety Orange
-    pdf.text('Automation & SCADA Systems', 60, yPosition);
-    yPosition += 25;
+    const activeAutomation = data.integrations.automationScada.filter(
+      automation => automation.brand !== 'None' && automation.brand !== 'Not sure'
+    );
     
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
-    pdf.setTextColor(55, 65, 81);
-    
-    data.integrations.automationScada.forEach(automation => {
-      if (automation.brand !== 'None' && automation.brand !== 'Not sure') {
+    if (activeAutomation.length > 0) {
+      checkPageSpace(60 + (activeAutomation.length * 20));
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.setTextColor(255, 169, 69); // Safety Orange
+      pdf.text('Automation & SCADA Systems', 60, yPosition);
+      yPosition += 25;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(12);
+      pdf.setTextColor(55, 65, 81);
+      
+      activeAutomation.forEach(automation => {
         pdf.text(`• ${automation.brand} (${automation.type})`, 80, yPosition);
         yPosition += 18;
-      }
-    });
-    yPosition += 10;
+      });
+      yPosition += 20;
+    }
   }
   
   // === NEW PAGE: RECOMMENDATIONS ===

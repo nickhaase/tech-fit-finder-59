@@ -1,6 +1,19 @@
 import { Node } from "@/utils/mapConfigToNodes";
 import { Flow, generateFlowsForNode } from "@/utils/generateFlows";
 
+// Brand colors based on MaintainX guidelines
+const BRAND_COLORS = {
+  primary: '#246CFF',           // MaintainX Blue
+  primaryDark: '#001E40',       // Hydraulic Blue
+  accent: '#2ED888',            // Safety Green
+  warning: '#FFA945',           // Safety Orange
+  background: '#ffffff',        // White background for PDF
+  foreground: '#1e293b',        // Dark text
+  muted: '#64748b',
+  card: '#f8fafc',
+  border: '#e2e8f0'
+};
+
 export class StaticFlowRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -17,7 +30,7 @@ export class StaticFlowRenderer {
     const ctx = this.ctx;
     
     // Clear canvas with white background for PDF
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = BRAND_COLORS.background;
     ctx.fillRect(0, 0, width, height);
     
     // Generate flows for all systems
@@ -27,13 +40,13 @@ export class StaticFlowRenderer {
       allFlows.push(...flows);
     });
     
-    // Render components
-    await this.renderSystemsColumn(ctx, systems, width * 0.4, height);
-    this.renderConnections(ctx, allFlows, width * 0.4, width * 0.6, height);
-    this.renderMaintainXHub(ctx, allFlows, width * 0.6, width, height);
+    // Render components with proper spacing
+    await this.renderSystemsColumn(ctx, systems, width * 0.35, height);
+    this.renderConnections(ctx, allFlows, width * 0.35, width * 0.65, height);
+    this.renderMaintainXHub(ctx, allFlows, width * 0.65, width, height);
     
-    // Add title
-    ctx.fillStyle = '#246CFF'; // MaintainX Blue
+    // Add title with brand color
+    ctx.fillStyle = BRAND_COLORS.primary;
     ctx.font = 'bold 24px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Integration Architecture Overview', width / 2, 40);
