@@ -190,7 +190,57 @@ export class ConfigService {
         // Check if migration is needed
         if (!parsed.schemaVersion || parsed.schemaVersion < 2) {
           console.log('🔄 Running taxonomy migration...');
-          const migratedConfig = MigrationService.runTaxonomyMigration(parsed);
+          // Non-destructive merge with new default taxonomy to PRESERVE custom edits
+          const def = createDefaultConfig();
+
+          // Clone parsed to avoid mutation
+          const base: AppConfig = { ...parsed };
+          // Ensure required fields exist
+          base.sections = base.sections || [];
+          base.synonymMap = base.synonymMap || {} as any;
+          base.resultCopy = base.resultCopy || def.resultCopy;
+
+          // 1) Merge sections: add only missing sections/subcategories from default
+          def.sections.forEach(defSection => {
+            const existingSection = base.sections.find(s => s.id === defSection.id);
+            if (!existingSection) {
+              base.sections.push(defSection); // add whole new section
+            } else {
+              // Ensure options arrays exist
+              existingSection.options = existingSection.options || [];
+              // Merge missing subcategories by id
+              if (defSection.subcategories?.length) {
+                existingSection.subcategories = existingSection.subcategories || [];
+                defSection.subcategories.forEach(defSub => {
+                  const hasSub = existingSection.subcategories!.some(s => s.id === defSub.id);
+                  if (!hasSub) existingSection.subcategories!.push(defSub);
+                });
+              }
+            }
+          });
+
+          // 2) Merge synonyms (keep user's overrides)
+          base.synonymMap = { ...def.synonymMap, ...base.synonymMap };
+
+          // 3) Preserve global brands and custom links/logos
+          if (parsed.globalBrands) base.globalBrands = parsed.globalBrands;
+
+          // 4) Carry over cross-listing flag
+          if (typeof base.crossListingEnabled === 'undefined') {
+            base.crossListingEnabled = def.crossListingEnabled;
+          }
+
+          // 5) Merge result copy
+          base.resultCopy = {
+            headers: { ...(def.resultCopy?.headers || {}), ...(base.resultCopy?.headers || {}) },
+            perBrand: {
+              ...(def.resultCopy?.perBrand || {}),
+              ...(base.resultCopy?.perBrand || {}),
+              defaultTemplate: (base.resultCopy as any)?.perBrand?.defaultTemplate || (def.resultCopy as any)?.perBrand?.defaultTemplate,
+            },
+          } as any;
+
+          const migratedConfig = MigrationService.runTaxonomyMigration(base);
           this.publish(migratedConfig);
           return migratedConfig;
         }
@@ -296,9 +346,16 @@ export class ConfigService {
     }
 
     try {
-      // Save current live as version
-      const current = this.getLive();
-      this.saveVersion(current, 'Pre-publish backup');
+      // Save current live as version (avoid recursive getLive during migration)
+      const currentStored = localStorage.getItem(CONFIG_KEY);
+      if (currentStored) {
+        try {
+          const currentParsed = JSON.parse(currentStored);
+          this.saveVersion(currentParsed, 'Pre-publish backup');
+        } catch (e) {
+          console.warn('Could not parse current live config for backup, skipping.');
+        }
+      }
 
       // Publish new config
       toPublish.status = 'published';

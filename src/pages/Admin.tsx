@@ -16,6 +16,7 @@ import { TaxonomyPreview } from '@/components/admin/TaxonomyPreview';
 import { ImportManager } from '@/components/admin/ImportManager';
 import { Save, Eye, Zap, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -40,6 +41,39 @@ const Admin = () => {
       }
     }
   }, []);
+
+  // Prompt to restore pre-migration snapshot if detected
+  useEffect(() => {
+    if (!config) return;
+    try {
+      const shownKey = 'mx_migration_restore_prompt_shown';
+      if (localStorage.getItem(shownKey)) return;
+      const versions = ConfigService.listVersions();
+      const migration = versions.find(v => v.id.startsWith('migration-') || (v.description || '').toLowerCase().includes('before taxonomy expansion'));
+      if (migration) {
+        toast({
+          title: 'Restore pre-migration configuration?',
+          description: 'We found a snapshot taken before migration. You can restore it to recover your edits.',
+          action: (
+            <ToastAction altText="Restore"
+              onClick={() => {
+                try {
+                  ConfigService.rollback(migration.id);
+                  localStorage.setItem(shownKey, '1');
+                  loadConfig();
+                  toast({ title: 'Restored', description: 'Pre-migration configuration has been restored.' });
+                } catch (e) {
+                  toast({ title: 'Restore failed', description: e instanceof Error ? e.message : 'Unable to restore snapshot', variant: 'destructive' });
+                }
+              }}
+            >
+              Restore
+            </ToastAction>
+          )
+        });
+      }
+    } catch {}
+  }, [config]);
 
   const loadConfig = () => {
     const draft = ConfigService.getDraft();
