@@ -13,6 +13,7 @@ import { AdminAuth } from '@/components/admin/AdminAuth';
 import { GlobalBrandManager } from '@/components/admin/GlobalBrandManager';
 import { CrossListingManager } from '@/components/admin/CrossListingManager';
 import { TaxonomyPreview } from '@/components/admin/TaxonomyPreview';
+import { ImportManager } from '@/components/admin/ImportManager';
 import { Save, Eye, Zap, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -262,12 +263,13 @@ const Admin = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="taxonomy" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="taxonomy">Taxonomy</TabsTrigger>
             <TabsTrigger value="global-brands">Global Brands</TabsTrigger>
             <TabsTrigger value="sections">Sections</TabsTrigger>
             <TabsTrigger value="cross-listing">Cross-Listing</TabsTrigger>
             <TabsTrigger value="synonyms">Synonyms</TabsTrigger>
+            <TabsTrigger value="import">Import</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Import</TabsTrigger>
             <TabsTrigger value="versions">Versions</TabsTrigger>
             <TabsTrigger value="copy">Copy</TabsTrigger>
@@ -291,6 +293,10 @@ const Admin = () => {
 
           <TabsContent value="synonyms">
             <SynonymManager config={config} onConfigChange={handleConfigChange} />
+          </TabsContent>
+
+          <TabsContent value="import">
+            <ImportManager config={config} onConfigChange={handleConfigChange} />
           </TabsContent>
 
           <TabsContent value="bulk">
