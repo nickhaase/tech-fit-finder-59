@@ -132,21 +132,7 @@ export const SENSOR_CATEGORIES: CategoryOption[] = [
       { id: 'drager', name: 'Dräger', commonNames: ['Draeger'] },
       { id: 'sick', name: 'SICK', commonNames: ['SICK AG'] },
     ]
-  },
-    {
-      id: 'platforms_historians',
-      name: 'Platforms/Historians',
-      description: 'Data collection and historian platforms (→ Data & Analytics)',
-      brands: [
-        { id: 'osisoft_pi', name: 'OSIsoft/AVEVA PI', commonNames: ['PI System', 'AVEVA PI'] },
-        { id: 'canary', name: 'Canary', commonNames: ['Canary Labs'] },
-        { id: 'ptc_thingworx', name: 'PTC ThingWorx', commonNames: ['ThingWorx'] },
-        { id: 'aws_iot', name: 'AWS IoT', commonNames: ['Amazon IoT'] },
-        { id: 'azure_iot', name: 'Azure IoT', commonNames: ['Microsoft Azure IoT'] },
-        { id: 'kepware', name: 'Kepware', commonNames: ['KEPServerEX'] },
-        { id: 'twinthread', name: 'Twinthread', commonNames: [] },
-      ]
-    }
+  }
 ];
 
 export const AUTOMATION_CATEGORIES: CategoryOption[] = [

@@ -51,6 +51,24 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const { toast } = useToast();
 
+  // Helper to resolve section aliases
+  const resolveSection = (sectionId: string, subcategoryId?: string) => {
+    const section = config.sections.find(s => s.id === sectionId);
+    if (!section) return null;
+    
+    if (subcategoryId) {
+      const subcategory = section.subcategories?.find(sub => sub.id === subcategoryId);
+      // Check if subcategory has an alias
+      if (subcategory && (subcategory as any).aliasOf) {
+        const [targetSectionId, targetSubcategoryId] = (subcategory as any).aliasOf.split('.');
+        return resolveSection(targetSectionId, targetSubcategoryId);
+      }
+      return subcategory;
+    }
+    
+    return section;
+  };
+
   // Debug function (console only)
   const debugConfig = () => {
     console.log('🔍 Config Debug:', {
@@ -633,7 +651,10 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
             ) : (
               <div className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
-                  {config.sections.find(s => s.id === 'sensors_monitoring')?.subcategories?.map((category) => (
+                  {config.sections.find(s => s.id === 'sensors_monitoring')?.subcategories?.filter((category) => {
+                    // Filter out aliased sections like platforms_historians
+                    return !(category as any).aliasOf;
+                  }).map((category) => (
                     <Card
                       key={category.id}
                       className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"

@@ -188,7 +188,7 @@ export class ConfigService {
         const parsed = JSON.parse(stored);
         
         // Check if migration is needed
-        if (!parsed.schemaVersion || parsed.schemaVersion < 2) {
+        if (!parsed.schemaVersion || parsed.schemaVersion < 3) {
           console.log('🔄 Running taxonomy migration...');
           // Non-destructive merge with new default taxonomy to PRESERVE custom edits
           const def = createDefaultConfig();

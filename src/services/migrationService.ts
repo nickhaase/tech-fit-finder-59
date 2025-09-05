@@ -1,6 +1,92 @@
-import { AppConfig, ConfigSection, BrandOption } from '@/types/config';
+import { AppConfig, ConfigSection, BrandOption, GlobalBrand } from '@/types/config';
 
 export class MigrationService {
+  /**
+   * Remove duplicated sections and brands, consolidating into global brands with references
+   */
+  static deduplicateSections(config: AppConfig): AppConfig {
+    const updatedConfig = { ...config };
+    
+    // Remove legacy platforms_historians from sensors section
+    const sensorsSection = updatedConfig.sections.find(s => s.id === 'sensors_monitoring');
+    if (sensorsSection?.subcategories) {
+      const historiansIndex = sensorsSection.subcategories.findIndex(sub => sub.id === 'platforms_historians');
+      if (historiansIndex >= 0) {
+        sensorsSection.subcategories.splice(historiansIndex, 1);
+        console.log('🧹 Removed legacy platforms_historians section');
+      }
+    }
+    
+    return updatedConfig;
+  }
+
+  /**
+   * Create global brands from duplicated brands and replace with references
+   */
+  static consolidateCrossListedBrands(config: AppConfig): AppConfig {
+    const updatedConfig = { ...config };
+    const globalBrandsMap = new Map<string, GlobalBrand>();
+    const brandReferences = new Map<string, string[]>(); // brandId -> section paths
+    
+    // Find all brands with categories (cross-listed brands)
+    updatedConfig.sections.forEach(section => {
+      section.options?.forEach(option => {
+        if (option.categories?.length) {
+          this.trackBrandReference(option, `${section.id}`, brandReferences, globalBrandsMap);
+        }
+      });
+      
+      section.subcategories?.forEach(sub => {
+        sub.options?.forEach(option => {
+          if (option.categories?.length) {
+            this.trackBrandReference(option, `${section.id}.${sub.id}`, brandReferences, globalBrandsMap);
+          }
+        });
+      });
+    });
+    
+    // Initialize global brands array if not exists
+    if (!updatedConfig.globalBrands) {
+      updatedConfig.globalBrands = [];
+    }
+    
+    // Convert cross-listed brands to global brands
+    globalBrandsMap.forEach((globalBrand, brandId) => {
+      const existingGlobal = updatedConfig.globalBrands!.find(gb => gb.id === brandId);
+      if (!existingGlobal) {
+        updatedConfig.globalBrands!.push(globalBrand);
+        console.log(`🌐 Created global brand: ${globalBrand.name}`);
+      }
+    });
+    
+    return updatedConfig;
+  }
+
+  private static trackBrandReference(
+    option: BrandOption, 
+    currentPath: string, 
+    brandReferences: Map<string, string[]>,
+    globalBrandsMap: Map<string, GlobalBrand>
+  ) {
+    const refs = brandReferences.get(option.id) || [];
+    refs.push(currentPath);
+    brandReferences.set(option.id, refs);
+    
+    // Create global brand entry
+    if (!globalBrandsMap.has(option.id)) {
+      const allSections = [currentPath, ...(option.categories || [])];
+      globalBrandsMap.set(option.id, {
+        id: option.id,
+        name: option.name,
+        logo: option.logo,
+        synonyms: option.synonyms || [],
+        state: option.state === 'optional' ? 'active' : (option.state || 'active'),
+        assignedSections: Array.from(new Set(allSections)),
+        sectionSpecificMeta: option.meta ? { [currentPath]: option.meta } : {}
+      });
+    }
+  }
+
   /**
    * Migrate legacy assessments that selected "platforms_historians" to new "data_analytics.historians"
    */
@@ -37,61 +123,53 @@ export class MigrationService {
   }
 
   /**
-   * Create cross-listing entries for brands that appear in multiple sections
+   * Create reference-based cross-listing instead of duplicating brands
    */
-  static setupCrossListing(config: AppConfig): AppConfig {
-    const crossListedBrands = new Map<string, BrandOption>();
+  static setupReferencedCrossListing(config: AppConfig): AppConfig {
+    const updatedConfig = { ...config };
     
-    // Collect all brands with categories field
-    config.sections.forEach(section => {
-      section.options?.forEach(option => {
-        if (option.categories?.length) {
-          crossListedBrands.set(option.id, option);
+    // Remove physical duplicates - brands should only exist in one primary location
+    const seenBrands = new Set<string>();
+    const brandLocations = new Map<string, string>(); // brandId -> primary location
+    
+    updatedConfig.sections.forEach(section => {
+      // Process main section options
+      section.options = section.options.filter(option => {
+        if (seenBrands.has(option.id)) {
+          console.log(`🧹 Removed duplicate brand ${option.name} from ${section.id}`);
+          return false;
         }
+        seenBrands.add(option.id);
+        brandLocations.set(option.id, section.id);
+        return true;
       });
       
+      // Process subcategory options
       section.subcategories?.forEach(sub => {
-        sub.options?.forEach(option => {
-          if (option.categories?.length) {
-            crossListedBrands.set(option.id, option);
+        sub.options = sub.options.filter(option => {
+          if (seenBrands.has(option.id)) {
+            console.log(`🧹 Removed duplicate brand ${option.name} from ${section.id}.${sub.id}`);
+            return false;
           }
+          seenBrands.add(option.id);
+          brandLocations.set(option.id, `${section.id}.${sub.id}`);
+          return true;
         });
       });
     });
     
-    // Add cross-listed brands to their target sections
-    crossListedBrands.forEach((brand, brandId) => {
-      brand.categories?.forEach(categoryPath => {
-        const [sectionId, subcategoryId] = categoryPath.split('.');
-        const section = config.sections.find(s => s.id === sectionId);
-        
-        if (section) {
-          let targetContainer: ConfigSection;
-          
-          if (subcategoryId) {
-            targetContainer = section.subcategories?.find(sub => sub.id === subcategoryId) || section;
-          } else {
-            targetContainer = section;
-          }
-          
-          // Check if brand already exists in target container
-          const existsInTarget = targetContainer.options.some(opt => opt.id === brandId);
-          
-          if (!existsInTarget) {
-            targetContainer.options.push({
-              ...brand,
-              // Mark as cross-listed for UI purposes
-              meta: {
-                ...brand.meta,
-                crossListed: true
-              }
-            });
-          }
+    // Update global brands to track proper section assignments
+    if (updatedConfig.globalBrands) {
+      updatedConfig.globalBrands.forEach(globalBrand => {
+        const primaryLocation = brandLocations.get(globalBrand.id);
+        if (primaryLocation && !globalBrand.assignedSections.includes(primaryLocation)) {
+          globalBrand.assignedSections.unshift(primaryLocation);
         }
       });
-    });
+    }
     
-    return config;
+    console.log(`✅ Deduplicated brands, ${seenBrands.size} unique brands remaining`);
+    return updatedConfig;
   }
 
   /**
@@ -123,24 +201,26 @@ export class MigrationService {
   }
 
   /**
-   * Full migration pipeline for taxonomy expansion
+   * Enhanced migration pipeline with deduplication
    */
   static runTaxonomyMigration(config: AppConfig): AppConfig {
-    console.log('🚀 Starting taxonomy migration...');
+    console.log('🚀 Starting enhanced taxonomy migration...');
     
     // Create snapshot first
-    this.createMigrationSnapshot('Before taxonomy expansion');
+    this.createMigrationSnapshot('Before deduplication and taxonomy expansion');
     
-    // Run migrations
+    // Run migrations in order
     let migratedConfig = config;
     migratedConfig = this.migrateHistoriansAlias(migratedConfig);
-    migratedConfig = this.setupCrossListing(migratedConfig);
+    migratedConfig = this.deduplicateSections(migratedConfig);
+    migratedConfig = this.consolidateCrossListedBrands(migratedConfig);
+    migratedConfig = this.setupReferencedCrossListing(migratedConfig);
     
     // Update schema version
-    migratedConfig.schemaVersion = 2;
+    migratedConfig.schemaVersion = 3; // Increment for deduplication
     migratedConfig.updatedAt = new Date().toISOString();
     
-    console.log('✅ Taxonomy migration completed');
+    console.log('✅ Enhanced taxonomy migration completed');
     return migratedConfig;
   }
 }

@@ -85,47 +85,76 @@ export const CrossListingManager = ({ config, onConfigChange }: CrossListingMana
   };
 
   const updateBrandAssignments = (brandId: string, newSections: string[]) => {
-    const newConfig = { ...config };
+    const updatedConfig = { ...config };
     
-    // Remove brand from all current locations
-    newConfig.sections.forEach(section => {
-      section.options = section.options?.filter(opt => opt.id !== brandId) || [];
+    // Initialize global brands if not exists
+    if (!updatedConfig.globalBrands) {
+      updatedConfig.globalBrands = [];
+    }
+    
+    // Find or create global brand
+    let globalBrand = updatedConfig.globalBrands.find(gb => gb.id === brandId);
+    
+    if (!globalBrand) {
+      // Create new global brand from existing brand data
+      const brandData = getAllBrands().find(b => b.id === brandId);
+      
+      if (brandData) {
+        globalBrand = {
+          id: brandData.id,
+          name: brandData.name,
+          logo: brandData.logo,
+          synonyms: brandData.synonyms || [],
+          state: brandData.state === 'optional' ? 'active' : (brandData.state || 'active'),
+          assignedSections: newSections
+        };
+        updatedConfig.globalBrands.push(globalBrand);
+      }
+    } else {
+      // Update existing global brand
+      globalBrand.assignedSections = newSections;
+    }
+    
+    // Remove all physical instances of this brand (keep only one primary instance)
+    updatedConfig.sections.forEach(section => {
+      section.options = section.options.filter(option => option.id !== brandId);
       section.subcategories?.forEach(sub => {
-        sub.options = sub.options?.filter(opt => opt.id !== brandId) || [];
+        sub.options = sub.options.filter(option => option.id !== brandId);
       });
     });
     
-    // Find the brand data
-    const brandData = getAllBrands().find(b => b.id === brandId);
-    if (!brandData) return;
-    
-    // Add brand to new sections
-    newSections.forEach(sectionPath => {
-      const [sectionId, subcategoryId] = sectionPath.split('.');
-      const section = newConfig.sections.find(s => s.id === sectionId);
+    // Add brand to only the first (primary) section to prevent duplication
+    if (newSections.length > 0 && globalBrand) {
+      const primarySection = newSections[0];
+      const [sectionId, subcategoryId] = primarySection.split('.');
+      const section = updatedConfig.sections.find(s => s.id === sectionId);
       
       if (section) {
-        const brandOption = {
-          ...brandData,
-          categories: newSections, // Update cross-listing info
+        const targetContainer = subcategoryId 
+          ? section.subcategories?.find(sub => sub.id === subcategoryId) || section
+          : section;
+        
+        const primaryBrand = {
+          id: globalBrand.id,
+          name: globalBrand.name,
+          logo: globalBrand.logo,
+          synonyms: globalBrand.synonyms,
+          state: globalBrand.state as any,
+          globalId: globalBrand.id,
+          isLinkedToGlobal: true,
+          assignedSections: newSections,
+          categories: newSections.slice(1), // All other sections are cross-listings
           meta: {
-            ...brandData.meta,
             crossListed: newSections.length > 1
           }
         };
         
-        if (subcategoryId) {
-          const subcategory = section.subcategories?.find(sub => sub.id === subcategoryId);
-          if (subcategory) {
-            subcategory.options.push(brandOption);
-          }
-        } else {
-          section.options.push(brandOption);
-        }
+        targetContainer.options.push(primaryBrand);
       }
-    });
+    }
     
-    onConfigChange(newConfig);
+    console.log(`🔗 Updated brand assignments for ${globalBrand?.name}: ${newSections.join(', ')}`);
+    onConfigChange(updatedConfig);
   };
 
   return (
