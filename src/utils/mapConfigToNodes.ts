@@ -135,13 +135,20 @@ function inferCategoryFromSection(sectionId: string, subcategoryId?: string): No
 }
 
 function findBrandInConfig(config: AppConfig, brandName: string): BrandOption | null {
+  console.log(`🔍 Searching for brand: "${brandName}"`);
+  
   // Search through all sections and subcategories for the brand
   for (const section of config.sections) {
+    console.log(`  📁 Checking section: ${section.id}`);
+    
     // Check section options
     const sectionBrand = section.options?.find(opt => 
       opt.name === brandName || opt.synonyms?.includes(brandName)
     );
-    if (sectionBrand) return sectionBrand;
+    if (sectionBrand) {
+      console.log(`  ✅ Found in section ${section.id}:`, sectionBrand);
+      return sectionBrand;
+    }
     
     // Check subcategory options
     if (section.subcategories) {
@@ -149,7 +156,10 @@ function findBrandInConfig(config: AppConfig, brandName: string): BrandOption | 
         const subcategoryBrand = subcategory.options?.find(opt => 
           opt.name === brandName || opt.synonyms?.includes(brandName)
         );
-        if (subcategoryBrand) return subcategoryBrand;
+        if (subcategoryBrand) {
+          console.log(`  ✅ Found in subcategory ${section.id}/${subcategory.id}:`, subcategoryBrand);
+          return subcategoryBrand;
+        }
       }
     }
   }
@@ -160,6 +170,7 @@ function findBrandInConfig(config: AppConfig, brandName: string): BrandOption | 
       brand.name === brandName || brand.synonyms?.includes(brandName)
     );
     if (globalBrand) {
+      console.log(`  ✅ Found in global brands:`, globalBrand);
       return {
         id: globalBrand.id,
         name: globalBrand.name,
@@ -170,10 +181,28 @@ function findBrandInConfig(config: AppConfig, brandName: string): BrandOption | 
     }
   }
   
-  return null;
+  console.log(`  ❌ Brand "${brandName}" not found in config`);
+  
+  // Return a minimal brand info as fallback for unknown brands
+  return {
+    id: brandName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+    name: brandName,
+    synonyms: [],
+    state: 'active'
+  };
 }
 
 export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentData): Node[] {
+  console.log('🗺️ Starting mapConfigToNodes');
+  console.log('📊 Assessment data:', {
+    mode: assessmentData.mode,
+    hasERP: !!assessmentData.integrations.erp,
+    erpBrand: assessmentData.integrations.erp?.brand,
+    sensorsCount: assessmentData.integrations.sensorsMonitoring?.length || 0,
+    automationCount: assessmentData.integrations.automationScada?.length || 0,
+    otherCount: assessmentData.integrations.otherSystems?.length || 0
+  });
+  
   const nodes: Node[] = [];
   const seenGlobalIds = new Set<string>();
   
@@ -182,8 +211,10 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
       assessmentData.integrations.erp.brand !== 'None' && 
       assessmentData.integrations.erp.brand !== 'Not sure') {
     
+    console.log('🏢 Processing ERP:', assessmentData.integrations.erp.brand);
     const erpConfig = assessmentData.integrations.erp;
     const brandInfo = findBrandInConfig(config, erpConfig.brand);
+    console.log('🔍 ERP brand search result:', brandInfo ? `Found: ${brandInfo.name}` : 'Not found');
     
     const node: Node = {
       id: brandInfo?.globalId || brandInfo?.id || `erp-${erpConfig.brand}`,
@@ -199,8 +230,14 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
       originalConfig: erpConfig
     };
     
+    console.log('✅ Created ERP node:', node);
     nodes.push(node);
     if (brandInfo?.globalId) seenGlobalIds.add(brandInfo.globalId);
+  } else {
+    console.log('❌ No valid ERP found:', {
+      hasERP: !!assessmentData.integrations.erp,
+      erpBrand: assessmentData.integrations.erp?.brand
+    });
   }
   
   // Map sensor systems
@@ -297,6 +334,15 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
       if (brandInfo?.globalId) seenGlobalIds.add(brandInfo.globalId);
     });
   
+  console.log('📋 Final nodes summary:', {
+    totalNodes: nodes.length,
+    nodesByCategory: nodes.reduce((acc, node) => {
+      acc[node.category] = (acc[node.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+    nodeNames: nodes.map(n => `${n.name} (${n.category})`)
+  });
+
   // Sort by priority (closer to hub) then alphabetically
   return nodes.sort((a, b) => {
     if (a.priority !== b.priority) return a.priority - b.priority;

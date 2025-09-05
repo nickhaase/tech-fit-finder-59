@@ -37,8 +37,19 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
   // Get dynamic systems from backend config
   const systems = useMemo(() => {
     try {
+      console.log('🔄 DataFlowVisualization loading data');
       const config = ConfigService.getLive();
-      return mapConfigToNodes(config, data);
+      console.log('📦 Config loaded:', {
+        sectionsCount: config.sections.length,
+        hasERPSection: config.sections.some(s => s.id === 'erp'),
+        totalBrands: config.sections.reduce((acc, s) => 
+          acc + (s.options?.length || 0) + 
+          (s.subcategories?.reduce((sub, cat) => sub + (cat.options?.length || 0), 0) || 0), 0)
+      });
+      
+      const mappedSystems = mapConfigToNodes(config, data);
+      console.log('🎯 Systems mapped:', mappedSystems.length, mappedSystems);
+      return mappedSystems;
     } catch (error) {
       console.warn('Failed to load config, using fallback data:', error);
       return [];
@@ -278,7 +289,6 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                   {maintainXModules.map((module) => {
                     const Icon = module.icon;
                     const isActive = activeFlows.some(f => f.to === module.id || f.from === module.id);
-                    console.log(`Module ${module.id} active:`, isActive, activeFlows);
                     
                     return (
                       <div
@@ -348,7 +358,6 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
               <div className="text-xs text-muted-foreground">
                 Active data flows: {activeFlows.filter(f => {
                   const system = systems.find(s => s.name === hoveredSystem);
-                  console.log(`Checking flows for ${hoveredSystem}:`, system?.id, f.from, f.to);
                   return system && (f.from === system.id || f.to === system.id);
                 }).length}
               </div>
