@@ -50,49 +50,16 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const { toast } = useToast();
 
-  // Debug function to log config state
+  // Debug function (console only)
   const debugConfig = () => {
-    console.log('🔍 Current config state:', {
+    console.log('🔍 Config Debug:', {
       sections: config.sections.length,
       status: config.status,
-      updatedAt: config.updatedAt,
       hasLogos: config.sections.some(s => 
         s.options.some(o => o.logo) || 
         s.subcategories?.some(sub => sub.options.some(o => o.logo))
       )
     });
-    
-    // Log localStorage state
-    const liveConfig = localStorage.getItem('mx_config_live');
-    const draftConfig = localStorage.getItem('mx_config_draft');
-    console.log('🗄️ localStorage state:', {
-      hasLive: !!liveConfig,
-      hasDraft: !!draftConfig,
-      liveSize: liveConfig ? `${Math.round(liveConfig.length / 1024)}KB` : '0KB'
-    });
-    
-    // Log a sample of logos found
-    const allLogos: string[] = [];
-    config.sections.forEach(section => {
-      section.options.forEach(option => {
-        if (option.logo) allLogos.push(`${option.name}: ${option.logo}`);
-      });
-      section.subcategories?.forEach(sub => {
-        sub.options.forEach(option => {
-          if (option.logo) allLogos.push(`${option.name}: ${option.logo}`);
-        });
-      });
-    });
-    console.log('🖼️ Found logos:', allLogos.slice(0, 5));
-    
-    // Debug first few brands in ERP section
-    if (config.sections[0]?.options?.length > 0) {
-      console.log('🏢 ERP section sample:', config.sections[0].options.slice(0, 3).map(opt => ({
-        name: opt.name,
-        hasLogo: !!opt.logo,
-        logoPath: opt.logo
-      })));
-    }
   };
 
   // Debug localStorage function
@@ -915,25 +882,6 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
             Answer questions about your current systems and see how MaintainX can seamlessly integrate with your infrastructure.
           </p>
           
-          {/* Debug panel */}
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg text-sm max-w-md mx-auto">
-            <details>
-              <summary className="cursor-pointer font-medium">Config Status</summary>
-              <div className="mt-2 text-left space-y-1">
-                <p><strong>Updated:</strong> {new Date(config.updatedAt).toLocaleString()}</p>
-                <p><strong>Logos:</strong> {config.sections.reduce((acc, s) => 
-                  acc + s.options.filter(o => o.logo).length + 
-                  (s.subcategories?.reduce((sub, cat) => sub + cat.options.filter(o => o.logo).length, 0) || 0), 0
-                )}</p>
-                <button 
-                  onClick={debugConfig}
-                  className="mt-2 px-2 py-1 bg-primary text-primary-foreground rounded text-xs"
-                >
-                  Debug Console
-                </button>
-              </div>
-            </details>
-          </div>
         </div>
 
         <Card className="p-8 bg-gradient-card shadow-card border-0">
@@ -992,36 +940,6 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
                 Previous
               </Button>
               
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={refreshConfig}
-                disabled={isRefreshing}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-                title="Refresh configuration to load latest logos and settings"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Loading...' : 'Refresh'}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  console.log('🐛 Manual debug triggered');
-                  debugLocalStorage();
-                  debugConfig();
-                  // Force reload from localStorage
-                  const freshConfig = ConfigService.getLive();
-                  setConfig(freshConfig);
-                  setLastRefresh(Date.now());
-                }}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-                title="Debug configuration and localStorage"
-              >
-                <Bug className="w-4 h-4" />
-                Debug
-              </Button>
             </div>
 
             {currentStep < totalSteps - 1 ? (
