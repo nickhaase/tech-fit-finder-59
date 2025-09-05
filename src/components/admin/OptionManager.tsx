@@ -6,20 +6,34 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ConfigSection, BrandOption } from '@/types/config';
-import { Plus, Edit, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
+import { ConfigSection, BrandOption, AppConfig } from '@/types/config';
+import { Plus, Edit, Trash2, Upload, Image as ImageIcon, Globe, Link, Unlink, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { compressImage } from '@/utils/imageUtils';
+import { BrandSelector } from './BrandSelector';
+import { ConfigService } from '@/services/configService';
 
 interface OptionManagerProps {
   section: ConfigSection;
   onSectionUpdate: (section: ConfigSection) => void;
+  config: AppConfig;
+  onConfigUpdate: (config: AppConfig) => void;
+  subcategoryId?: string; // For subcategory options
 }
 
-export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) => {
+export const OptionManager = ({ 
+  section, 
+  onSectionUpdate, 
+  config, 
+  onConfigUpdate, 
+  subcategoryId 
+}: OptionManagerProps) => {
   const [editingOption, setEditingOption] = useState<BrandOption | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [showBrandSelector, setShowBrandSelector] = useState(false);
   const { toast } = useToast();
+
+  const globalBrands = config.globalBrands || [];
 
   const createNewOption = (): BrandOption => ({
     id: '',
@@ -73,6 +87,91 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
       title: isCreating ? "Option Created" : "Option Updated",
       description: `${editingOption.name} has been ${isCreating ? 'created' : 'updated'}.`
     });
+  };
+
+  const handleLinkToGlobalBrand = (brandId: string) => {
+    if (!editingOption) return;
+    
+    const updatedConfig = ConfigService.linkOptionToGlobalBrand(
+      config, 
+      section.id, 
+      subcategoryId || null, 
+      editingOption.id, 
+      brandId
+    );
+    
+    const globalBrand = globalBrands.find(b => b.id === brandId);
+    if (globalBrand) {
+      setEditingOption({
+        ...editingOption,
+        globalId: brandId,
+        isLinkedToGlobal: true,
+        name: globalBrand.name,
+        logo: globalBrand.logo,
+        synonyms: globalBrand.synonyms,
+        state: globalBrand.state
+      });
+    }
+    
+    onConfigUpdate(updatedConfig);
+    
+    toast({
+      title: "Linked to Global Brand",
+      description: `${editingOption.name} is now linked to the global brand library.`
+    });
+  };
+
+  const handleUnlinkFromGlobalBrand = () => {
+    if (!editingOption) return;
+    
+    const updatedConfig = ConfigService.unlinkOptionFromGlobalBrand(
+      config, 
+      section.id, 
+      subcategoryId || null, 
+      editingOption.id
+    );
+    
+    setEditingOption({
+      ...editingOption,
+      globalId: undefined,
+      isLinkedToGlobal: false
+    });
+    
+    onConfigUpdate(updatedConfig);
+    
+    toast({
+      title: "Unlinked from Global Brand",
+      description: `${editingOption.name} is now independent of the global brand library.`
+    });
+  };
+
+  const handleCreateGlobalBrand = () => {
+    if (!editingOption) return;
+    
+    const updatedConfig = ConfigService.createGlobalBrandFromOption(
+      config, 
+      section.id, 
+      subcategoryId || null, 
+      editingOption.id
+    );
+    
+    onConfigUpdate(updatedConfig);
+    
+    toast({
+      title: "Global Brand Created",
+      description: `${editingOption.name} has been added to the global brand library.`
+    });
+  };
+
+  const getLinkedGlobalBrand = (option: BrandOption) => {
+    if (!option.globalId) return null;
+    return globalBrands.find(b => b.id === option.globalId);
+  };
+
+  const checkForDuplicateBrands = (optionName: string) => {
+    return globalBrands.filter(brand => 
+      brand.name.toLowerCase() === optionName.toLowerCase()
+    );
   };
 
   const handleDeleteOption = (optionId: string) => {
@@ -181,11 +280,24 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
                       <ImageIcon className="w-4 h-4 text-muted-foreground" />
                     </div>
                   )}
-                  <div>
-                    <div className="font-medium">{option.name}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{option.name}</span>
+                      {option.isLinkedToGlobal && (
+                        <Badge variant="outline" className="text-xs">
+                          <Globe className="w-3 h-3 mr-1" />
+                          Global
+                        </Badge>
+                      )}
+                    </div>
                     {option.synonyms.length > 0 && (
                       <div className="text-sm text-muted-foreground">
                         Synonyms: {option.synonyms.join(', ')}
+                      </div>
+                    )}
+                    {option.isLinkedToGlobal && (
+                      <div className="text-xs text-muted-foreground">
+                        Synced with global brand library
                       </div>
                     )}
                   </div>
@@ -228,6 +340,85 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Global Brand Connection */}
+            {editingOption && (
+              <div className="p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    <Label className="text-sm font-medium">Global Brand Connection</Label>
+                  </div>
+                  {editingOption.isLinkedToGlobal && (
+                    <Badge variant="outline" className="text-xs">
+                      <Link className="w-3 h-3 mr-1" />
+                      Linked
+                    </Badge>
+                  )}
+                </div>
+                
+                {editingOption.isLinkedToGlobal ? (
+                  <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">
+                      This option is linked to a global brand. Core information (name, logo, synonyms) will sync automatically.
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBrandSelector(true)}
+                      >
+                        <Globe className="w-4 h-4 mr-2" />
+                        Change Global Brand
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUnlinkFromGlobalBrand}
+                      >
+                        <Unlink className="w-4 h-4 mr-2" />
+                        Unlink
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">
+                      Link to a global brand for consistent logos and naming across sections.
+                    </div>
+                    {checkForDuplicateBrands(editingOption.name || '').length > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-amber-600">
+                        <AlertTriangle className="w-4 h-4" />
+                        Similar global brands found: {checkForDuplicateBrands(editingOption.name || '').map(b => b.name).join(', ')}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBrandSelector(true)}
+                      >
+                        <Link className="w-4 h-4 mr-2" />
+                        Link Existing Global Brand
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCreateGlobalBrand}
+                        disabled={!editingOption.name}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Global Brand
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Name</Label>
@@ -239,7 +430,13 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
                     name: e.target.value
                   })}
                   placeholder="Brand name"
+                  disabled={editingOption.isLinkedToGlobal}
                 />
+                {editingOption.isLinkedToGlobal && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Name synced from global brand
+                  </div>
+                )}
               </div>
               <div>
                 <Label htmlFor="state">State</Label>
@@ -248,6 +445,7 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
                   onValueChange={(value: 'active' | 'deprecated' | 'hidden') =>
                     setEditingOption({ ...editingOption, state: value })
                   }
+                  disabled={editingOption.isLinkedToGlobal}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -258,6 +456,11 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
                     <SelectItem value="hidden">Hidden</SelectItem>
                   </SelectContent>
                 </Select>
+                {editingOption.isLinkedToGlobal && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    State synced from global brand
+                  </div>
+                )}
               </div>
             </div>
 
@@ -280,6 +483,7 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
                       logo: e.target.value
                     })}
                     placeholder="Logo URL or upload below"
+                    disabled={editingOption.isLinkedToGlobal}
                   />
                 </div>
                 <div>
@@ -289,17 +493,24 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
                     onChange={handleFileUpload}
                     className="hidden"
                     id="logo-upload"
+                    disabled={editingOption.isLinkedToGlobal}
                   />
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => document.getElementById('logo-upload')?.click()}
+                    disabled={editingOption.isLinkedToGlobal}
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Upload
                   </Button>
                 </div>
               </div>
+              {editingOption.isLinkedToGlobal && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Logo synced from global brand
+                </div>
+              )}
             </div>
 
             <div>
@@ -313,7 +524,13 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
                 })}
                 placeholder="Common names, separated by commas"
                 rows={2}
+                disabled={editingOption.isLinkedToGlobal}
               />
+              {editingOption.isLinkedToGlobal && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Synonyms synced from global brand
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2">
@@ -333,6 +550,15 @@ export const OptionManager = ({ section, onSectionUpdate }: OptionManagerProps) 
           </CardContent>
         </Card>
       )}
+
+      {/* Brand Selector Modal */}
+      <BrandSelector
+        isOpen={showBrandSelector}
+        onClose={() => setShowBrandSelector(false)}
+        globalBrands={globalBrands}
+        onSelectBrand={handleLinkToGlobalBrand}
+        currentLinkedBrandId={editingOption?.globalId}
+      />
     </div>
   );
 };

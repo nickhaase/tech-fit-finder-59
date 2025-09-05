@@ -39,6 +39,11 @@ export interface BrandOption {
   state: 'active' | 'deprecated' | 'hidden' | 'optional';
   globalId?: string; // Reference to global brand
   assignedSections?: string[]; // Which sections this brand is assigned to
+  isLinkedToGlobal?: boolean; // Visual indicator for UI
+  sectionSpecificOverrides?: {
+    description?: string;
+    meta?: any;
+  }; // Allow section-specific customization while keeping core brand synced
 }
 
 export interface GlobalBrand {

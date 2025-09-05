@@ -473,6 +473,160 @@ export class ConfigService {
     };
   }
 
+  // Brand connection utilities
+  static linkOptionToGlobalBrand(config: AppConfig, sectionId: string, subcategoryId: string | null, optionId: string, globalBrandId: string): AppConfig {
+    const updatedConfig = { ...config };
+    
+    // Find the global brand
+    const globalBrand = updatedConfig.globalBrands?.find(b => b.id === globalBrandId);
+    if (!globalBrand) {
+      throw new Error('Global brand not found');
+    }
+
+    // Find and update the option
+    const section = updatedConfig.sections.find(s => s.id === sectionId);
+    if (!section) return updatedConfig;
+
+    let targetOptions: any[] = [];
+    
+    if (subcategoryId) {
+      const subcategory = section.subcategories?.find(sub => sub.id === subcategoryId);
+      if (subcategory) {
+        targetOptions = subcategory.options || [];
+      }
+    } else {
+      targetOptions = section.options || [];
+    }
+
+    const optionIndex = targetOptions.findIndex(o => o.id === optionId);
+    if (optionIndex >= 0) {
+      const existingOption = targetOptions[optionIndex];
+      
+      // Sync core brand data from global brand
+      targetOptions[optionIndex] = {
+        ...existingOption,
+        globalId: globalBrandId,
+        isLinkedToGlobal: true,
+        name: globalBrand.name,
+        logo: globalBrand.logo,
+        synonyms: globalBrand.synonyms,
+        state: globalBrand.state
+      };
+    }
+
+    return updatedConfig;
+  }
+
+  static unlinkOptionFromGlobalBrand(config: AppConfig, sectionId: string, subcategoryId: string | null, optionId: string): AppConfig {
+    const updatedConfig = { ...config };
+    const section = updatedConfig.sections.find(s => s.id === sectionId);
+    if (!section) return updatedConfig;
+
+    let targetOptions: any[] = [];
+    
+    if (subcategoryId) {
+      const subcategory = section.subcategories?.find(sub => sub.id === subcategoryId);
+      if (subcategory) {
+        targetOptions = subcategory.options || [];
+      }
+    } else {
+      targetOptions = section.options || [];
+    }
+
+    const optionIndex = targetOptions.findIndex(o => o.id === optionId);
+    if (optionIndex >= 0) {
+      const { globalId, isLinkedToGlobal, sectionSpecificOverrides, ...option } = targetOptions[optionIndex];
+      targetOptions[optionIndex] = option;
+    }
+
+    return updatedConfig;
+  }
+
+  static syncLinkedOptionsFromGlobalBrand(config: AppConfig, globalBrandId: string): AppConfig {
+    const updatedConfig = { ...config };
+    const globalBrand = updatedConfig.globalBrands?.find(b => b.id === globalBrandId);
+    if (!globalBrand) return updatedConfig;
+
+    // Find all linked options and sync them
+    updatedConfig.sections.forEach(section => {
+      // Sync section-level options
+      if (section.options) {
+        section.options.forEach((option, index) => {
+          if (option.globalId === globalBrandId) {
+            section.options![index] = {
+              ...option,
+              name: globalBrand.name,
+              logo: globalBrand.logo,
+              synonyms: globalBrand.synonyms,
+              state: globalBrand.state
+            };
+          }
+        });
+      }
+
+      // Sync subcategory options
+      if (section.subcategories) {
+        section.subcategories.forEach(subcategory => {
+          if (subcategory.options) {
+            subcategory.options.forEach((option, index) => {
+              if (option.globalId === globalBrandId) {
+                subcategory.options![index] = {
+                  ...option,
+                  name: globalBrand.name,
+                  logo: globalBrand.logo,
+                  synonyms: globalBrand.synonyms,
+                  state: globalBrand.state
+                };
+              }
+            });
+          }
+        });
+      }
+    });
+
+    return updatedConfig;
+  }
+
+  static createGlobalBrandFromOption(config: AppConfig, sectionId: string, subcategoryId: string | null, optionId: string): AppConfig {
+    const updatedConfig = { ...config };
+    const section = updatedConfig.sections.find(s => s.id === sectionId);
+    if (!section) return updatedConfig;
+
+    let targetOptions: any[] = [];
+    
+    if (subcategoryId) {
+      const subcategory = section.subcategories?.find(sub => sub.id === subcategoryId);
+      if (subcategory) {
+        targetOptions = subcategory.options || [];
+      }
+    } else {
+      targetOptions = section.options || [];
+    }
+
+    const option = targetOptions.find(o => o.id === optionId);
+    if (!option) return updatedConfig;
+
+    // Create global brand from option
+    const newGlobalBrand = {
+      id: option.id + '_global',
+      name: option.name,
+      logo: option.logo,
+      synonyms: option.synonyms || [],
+      state: option.state === 'optional' ? 'active' as const : option.state,
+      assignedSections: [subcategoryId ? `${sectionId}.${subcategoryId}` : sectionId],
+      sectionSpecificMeta: {}
+    };
+
+    // Add to global brands
+    if (!updatedConfig.globalBrands) {
+      updatedConfig.globalBrands = [];
+    }
+    updatedConfig.globalBrands.push(newGlobalBrand);
+
+    // Link the option to the new global brand
+    return this.linkOptionToGlobalBrand(updatedConfig, sectionId, subcategoryId, optionId, newGlobalBrand.id);
+  }
+
   // Debug method to check localStorage usage
   static getStorageInfo(): { used: number, total: number, remaining: number } {
     let used = 0;

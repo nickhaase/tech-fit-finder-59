@@ -163,6 +163,9 @@ export const SectionManager = ({ config, onConfigChange }: SectionManagerProps) 
           <OptionManager
             section={getCurrentSection()!}
             onSectionUpdate={handleSectionUpdate}
+            config={config}
+            onConfigUpdate={onConfigChange}
+            subcategoryId={selectedSubcategory || undefined}
           />
         ) : (
           <Card>
