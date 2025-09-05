@@ -1,0 +1,299 @@
+import { AppConfig, BrandOption } from '@/types/config';
+import { AssessmentData, IntegrationDetail } from '@/types/assessment';
+
+export interface Node {
+  id: string;
+  name: string;
+  logo?: string;
+  category: 'ERP' | 'MES' | 'SCADA' | 'PLC' | 'Sensors' | 'Historian' |
+           'Inventory/WMS' | 'Workflow/ITSM/iPaaS' | 'Legacy CMMS/EAM' |
+           'Asset Tracking' | 'Construction' | 'Other';
+  directionality: 'bidirectional' | 'inbound' | 'outbound';
+  protocol: string[];
+  frequency: 'real-time' | 'near-real-time' | 'scheduled';
+  tier: 'business' | 'operational';
+  priority: number;
+  originalConfig?: IntegrationDetail;
+}
+
+// Category mapping from section IDs to Node categories
+const SECTION_TO_CATEGORY_MAP: Record<string, Node['category']> = {
+  'erp': 'ERP',
+  'mes': 'MES',
+  'scada': 'SCADA',
+  'plc': 'PLC',
+  'sensors_monitoring': 'Sensors',
+  'iot_sensors': 'Sensors',
+  'condition_monitoring': 'Sensors',
+  'environmental_sensors': 'Sensors',
+  'safety_sensors': 'Sensors',
+  'historians': 'Historian',
+  'platforms_historians': 'Historian',
+  'inventory_warehouse': 'Inventory/WMS',
+  'workflow_itsm': 'Workflow/ITSM/iPaaS',
+  'legacy_cmms': 'Legacy CMMS/EAM',
+  'asset_tracking': 'Asset Tracking',
+  'construction': 'Construction',
+  'automation_scada': 'SCADA',
+  'other_systems': 'Other'
+};
+
+// Category priority for layout ordering (lower = closer to hub)
+const CATEGORY_PRIORITY: Record<Node['category'], number> = {
+  'ERP': 1,
+  'MES': 2,
+  'SCADA': 2,
+  'PLC': 2,
+  'Sensors': 3,
+  'Historian': 4,
+  'Inventory/WMS': 5,
+  'Workflow/ITSM/iPaaS': 6,
+  'Asset Tracking': 7,
+  'Legacy CMMS/EAM': 8,
+  'Construction': 9,
+  'Other': 10
+};
+
+// Default protocols by category
+const CATEGORY_PROTOCOLS: Record<Node['category'], string[]> = {
+  'ERP': ['REST', 'SOAP', 'GraphQL', 'ODBC'],
+  'MES': ['OPC UA', 'MQTT', 'REST'],
+  'SCADA': ['OPC UA', 'MQTT', 'Modbus', 'PROFINET'],
+  'PLC': ['EtherNet/IP', 'Modbus', 'PROFINET'],
+  'Sensors': ['MQTT', 'OPC UA', 'HTTPS'],
+  'Historian': ['PI AF/SDK', 'OData', 'REST', 'Kafka'],
+  'Inventory/WMS': ['REST', 'SOAP', 'SFTP'],
+  'Workflow/ITSM/iPaaS': ['REST', 'Webhooks', 'OAuth'],
+  'Legacy CMMS/EAM': ['SOAP', 'SFTP', 'ODBC'],
+  'Asset Tracking': ['REST', 'MQTT', 'Webhooks'],
+  'Construction': ['REST', 'Webhooks'],
+  'Other': ['REST']
+};
+
+// Default directionality by category
+const CATEGORY_DIRECTIONALITY: Record<Node['category'], Node['directionality']> = {
+  'ERP': 'bidirectional',
+  'MES': 'bidirectional',
+  'SCADA': 'bidirectional',
+  'PLC': 'bidirectional',
+  'Sensors': 'inbound',
+  'Historian': 'inbound',
+  'Inventory/WMS': 'bidirectional',
+  'Workflow/ITSM/iPaaS': 'bidirectional',
+  'Legacy CMMS/EAM': 'outbound',
+  'Asset Tracking': 'bidirectional',
+  'Construction': 'bidirectional',
+  'Other': 'bidirectional'
+};
+
+// Default frequency by category
+const CATEGORY_FREQUENCY: Record<Node['category'], Node['frequency']> = {
+  'ERP': 'near-real-time',
+  'MES': 'near-real-time',
+  'SCADA': 'real-time',
+  'PLC': 'real-time',
+  'Sensors': 'real-time',
+  'Historian': 'near-real-time',
+  'Inventory/WMS': 'near-real-time',
+  'Workflow/ITSM/iPaaS': 'real-time',
+  'Legacy CMMS/EAM': 'scheduled',
+  'Asset Tracking': 'near-real-time',
+  'Construction': 'near-real-time',
+  'Other': 'near-real-time'
+};
+
+// Tier classification by category
+const CATEGORY_TIER: Record<Node['category'], Node['tier']> = {
+  'ERP': 'business',
+  'MES': 'operational',
+  'SCADA': 'operational',
+  'PLC': 'operational',
+  'Sensors': 'operational',
+  'Historian': 'operational',
+  'Inventory/WMS': 'business',
+  'Workflow/ITSM/iPaaS': 'business',
+  'Legacy CMMS/EAM': 'business',
+  'Asset Tracking': 'operational',
+  'Construction': 'business',
+  'Other': 'business'
+};
+
+function inferCategoryFromSection(sectionId: string, subcategoryId?: string): Node['category'] {
+  // Check subcategory first if available
+  if (subcategoryId && SECTION_TO_CATEGORY_MAP[subcategoryId]) {
+    return SECTION_TO_CATEGORY_MAP[subcategoryId];
+  }
+  
+  // Fall back to section mapping
+  return SECTION_TO_CATEGORY_MAP[sectionId] || 'Other';
+}
+
+function findBrandInConfig(config: AppConfig, brandName: string): BrandOption | null {
+  // Search through all sections and subcategories for the brand
+  for (const section of config.sections) {
+    // Check section options
+    const sectionBrand = section.options?.find(opt => 
+      opt.name === brandName || opt.synonyms?.includes(brandName)
+    );
+    if (sectionBrand) return sectionBrand;
+    
+    // Check subcategory options
+    if (section.subcategories) {
+      for (const subcategory of section.subcategories) {
+        const subcategoryBrand = subcategory.options?.find(opt => 
+          opt.name === brandName || opt.synonyms?.includes(brandName)
+        );
+        if (subcategoryBrand) return subcategoryBrand;
+      }
+    }
+  }
+  
+  // Check global brands
+  if (config.globalBrands) {
+    const globalBrand = config.globalBrands.find(brand => 
+      brand.name === brandName || brand.synonyms?.includes(brandName)
+    );
+    if (globalBrand) {
+      return {
+        id: globalBrand.id,
+        name: globalBrand.name,
+        logo: globalBrand.logo,
+        synonyms: globalBrand.synonyms,
+        state: globalBrand.state
+      };
+    }
+  }
+  
+  return null;
+}
+
+export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentData): Node[] {
+  const nodes: Node[] = [];
+  const seenGlobalIds = new Set<string>();
+  
+  // Map ERP system
+  if (assessmentData.integrations.erp && 
+      assessmentData.integrations.erp.brand !== 'None' && 
+      assessmentData.integrations.erp.brand !== 'Not sure') {
+    
+    const erpConfig = assessmentData.integrations.erp;
+    const brandInfo = findBrandInConfig(config, erpConfig.brand);
+    
+    const node: Node = {
+      id: brandInfo?.globalId || brandInfo?.id || `erp-${erpConfig.brand}`,
+      name: erpConfig.brand,
+      logo: brandInfo?.logo,
+      category: 'ERP',
+      directionality: (erpConfig.directionality === 'one-way-to' ? 'outbound' : 
+                      erpConfig.directionality === 'one-way-from' ? 'inbound' : 'bidirectional'),
+      protocol: erpConfig.protocol || CATEGORY_PROTOCOLS['ERP'],
+      frequency: erpConfig.frequency || CATEGORY_FREQUENCY['ERP'],
+      tier: CATEGORY_TIER['ERP'],
+      priority: CATEGORY_PRIORITY['ERP'],
+      originalConfig: erpConfig
+    };
+    
+    nodes.push(node);
+    if (brandInfo?.globalId) seenGlobalIds.add(brandInfo.globalId);
+  }
+  
+  // Map sensor systems
+  assessmentData.integrations.sensorsMonitoring
+    .filter(sensor => sensor.brand !== 'None' && sensor.brand !== 'Not sure')
+    .forEach(sensor => {
+      const brandInfo = findBrandInConfig(config, sensor.brand);
+      const globalId = brandInfo?.globalId || brandInfo?.id || `sensor-${sensor.brand}`;
+      
+      if (seenGlobalIds.has(globalId)) return; // Skip duplicates
+      
+      const category = inferCategoryFromSection('sensors_monitoring', sensor.category?.toLowerCase().replace(/[^a-z]/g, '_'));
+      
+      const node: Node = {
+        id: globalId,
+        name: sensor.brand,
+        logo: brandInfo?.logo,
+        category: category as Node['category'],
+        directionality: (sensor.directionality === 'one-way-to' ? 'outbound' : 
+                        sensor.directionality === 'one-way-from' ? 'inbound' : 
+                        CATEGORY_DIRECTIONALITY[category as Node['category']]),
+        protocol: sensor.protocol || CATEGORY_PROTOCOLS[category as Node['category']],
+        frequency: sensor.frequency || CATEGORY_FREQUENCY[category as Node['category']],
+        tier: CATEGORY_TIER[category as Node['category']],
+        priority: CATEGORY_PRIORITY[category as Node['category']],
+        originalConfig: sensor
+      };
+      
+      nodes.push(node);
+      if (brandInfo?.globalId) seenGlobalIds.add(brandInfo.globalId);
+    });
+  
+  // Map automation systems
+  assessmentData.integrations.automationScada
+    .filter(automation => automation.brand !== 'None' && automation.brand !== 'Not sure')
+    .forEach(automation => {
+      const brandInfo = findBrandInConfig(config, automation.brand);
+      const globalId = brandInfo?.globalId || brandInfo?.id || `automation-${automation.brand}`;
+      
+      if (seenGlobalIds.has(globalId)) return; // Skip duplicates
+      
+      const category = automation.type === 'SCADA' ? 'SCADA' : 
+                     automation.type === 'PLC' ? 'PLC' : 
+                     automation.type === 'MES' ? 'MES' : 'SCADA';
+      
+      const node: Node = {
+        id: globalId,
+        name: automation.brand,
+        logo: brandInfo?.logo,
+        category: category as Node['category'],
+        directionality: (automation.directionality === 'one-way-to' ? 'outbound' : 
+                        automation.directionality === 'one-way-from' ? 'inbound' : 'bidirectional'),
+        protocol: automation.protocol || CATEGORY_PROTOCOLS[category as Node['category']],
+        frequency: automation.frequency || CATEGORY_FREQUENCY[category as Node['category']],
+        tier: CATEGORY_TIER[category as Node['category']],
+        priority: CATEGORY_PRIORITY[category as Node['category']],
+        originalConfig: automation
+      };
+      
+      nodes.push(node);
+      if (brandInfo?.globalId) seenGlobalIds.add(brandInfo.globalId);
+    });
+  
+  // Map other systems
+  assessmentData.integrations.otherSystems
+    .filter(system => system.brand !== 'None' && system.brand !== 'Not sure')
+    .forEach(system => {
+      const brandInfo = findBrandInConfig(config, system.brand);
+      const globalId = brandInfo?.globalId || brandInfo?.id || `other-${system.brand}`;
+      
+      if (seenGlobalIds.has(globalId)) return; // Skip duplicates
+      
+      const category = system.type === 'Legacy CMMS/EAM' ? 'Legacy CMMS/EAM' :
+                      system.type === 'Asset Tracking' ? 'Asset Tracking' :
+                      system.type === 'Inventory/Warehouse' ? 'Inventory/WMS' :
+                      system.type === 'Workflow/ITSM/iPaaS' ? 'Workflow/ITSM/iPaaS' : 'Other';
+      
+      const node: Node = {
+        id: globalId,
+        name: system.brand,
+        logo: brandInfo?.logo,
+        category: category as Node['category'],
+        directionality: (system.directionality === 'one-way-to' ? 'outbound' : 
+                        system.directionality === 'one-way-from' ? 'inbound' : 
+                        CATEGORY_DIRECTIONALITY[category as Node['category']]),
+        protocol: system.protocol || CATEGORY_PROTOCOLS[category as Node['category']],
+        frequency: system.frequency || CATEGORY_FREQUENCY[category as Node['category']],
+        tier: CATEGORY_TIER[category as Node['category']],
+        priority: CATEGORY_PRIORITY[category as Node['category']],
+        originalConfig: system
+      };
+      
+      nodes.push(node);
+      if (brandInfo?.globalId) seenGlobalIds.add(brandInfo.globalId);
+    });
+  
+  // Sort by priority (closer to hub) then alphabetically
+  return nodes.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return a.name.localeCompare(b.name);
+  });
+}

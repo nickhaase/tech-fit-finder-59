@@ -1,22 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { AssessmentData } from "@/types/assessment";
 import { ArrowRight, Database, Factory, Zap, BarChart3, Settings, FileText, Wifi } from "lucide-react";
 import maintainxLogo from "@/assets/logos/maintainx-logo.png";
+import { mapConfigToNodes, Node } from "@/utils/mapConfigToNodes";
+import { generateFlowsForNode, Flow } from "@/utils/generateFlows";
+import { ConfigService } from "@/services/configService";
 
 interface DataFlowVisualizationProps {
   data: AssessmentData;
 }
 
-interface DataFlow {
-  id: string;
-  from: string;
-  to: string;
-  dataType: string;
-  direction: 'inbound' | 'outbound' | 'bidirectional';
-  frequency: 'real-time' | 'near-real-time' | 'scheduled';
-  protocol: string;
-  color: string;
-}
+// Re-export Flow type from utils for backward compatibility
+export type { Flow as DataFlow } from "@/utils/generateFlows";
 
 interface MaintainXModule {
   id: string;
@@ -28,7 +23,7 @@ interface MaintainXModule {
 
 export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
   const [animationIndex, setAnimationIndex] = useState(0);
-  const [activeFlows, setActiveFlows] = useState<DataFlow[]>([]);
+  const [activeFlows, setActiveFlows] = useState<Flow[]>([]);
   const [hoveredSystem, setHoveredSystem] = useState<string | null>(null);
   
   // Define MaintainX modules with positions
@@ -39,138 +34,23 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
     { id: 'analytics', name: 'Analytics', icon: BarChart3, position: { x: -40, y: 0 }, activeConnections: [] },
   ];
 
-  // Get unique systems for animation
-  const systems = [
-    ...(data.integrations.erp ? [{ 
-      name: data.integrations.erp.brand, 
-      type: 'ERP',
-      config: data.integrations.erp,
-      category: 'business'
-    }] : []),
-    ...data.integrations.sensorsMonitoring
-      .filter(s => s.brand !== 'None' && s.brand !== 'Not sure')
-      .map(s => ({ 
-        name: s.brand, 
-        type: 'Sensor',
-        config: s,
-        category: 'operational'
-      })),
-    ...data.integrations.automationScada
-      .filter(a => a.brand !== 'None' && a.brand !== 'Not sure')
-      .map(a => ({ 
-        name: a.brand, 
-        type: 'Automation',
-        config: a,
-        category: 'operational'
-      })),
-    ...data.integrations.otherSystems
-      .filter(o => o.brand !== 'None' && o.brand !== 'Not sure')
-      .map(o => ({ 
-        name: o.brand, 
-        type: 'System',
-        config: o,
-        category: 'business'
-      }))
-  ];
+  // Get dynamic systems from backend config
+  const systems = useMemo(() => {
+    try {
+      const config = ConfigService.getLive();
+      return mapConfigToNodes(config, data);
+    } catch (error) {
+      console.warn('Failed to load config, using fallback data:', error);
+      return [];
+    }
+  }, [data]);
 
   // Generate data flows based on system configurations
-  const generateDataFlows = (systemIndex: number): DataFlow[] => {
+  const generateDataFlows = (systemIndex: number): Flow[] => {
     const system = systems[systemIndex];
     if (!system) return [];
-
-    const flows: DataFlow[] = [];
-    const config = system.config;
-
-    // Inbound flows (to MaintainX)
-    if (system.type === 'ERP') {
-      flows.push({
-        id: `${system.name}-orders`,
-        from: system.name,
-        to: 'work-orders',
-        dataType: 'Purchase Orders',
-        direction: 'inbound',
-        frequency: config.frequency || 'scheduled',
-        protocol: config.protocol?.[0] || 'REST API',
-        color: 'flow-primary'
-      });
-      flows.push({
-        id: `${system.name}-inventory`,
-        from: system.name,
-        to: 'assets',
-        dataType: 'Inventory Levels',
-        direction: 'inbound',
-        frequency: config.frequency || 'scheduled',
-        protocol: config.protocol?.[0] || 'REST API',
-        color: 'flow-secondary'
-      });
-    }
-
-    if (system.type === 'Sensor') {
-      flows.push({
-        id: `${system.name}-readings`,
-        from: system.name,
-        to: 'assets',
-        dataType: 'Sensor Data',
-        direction: 'inbound',
-        frequency: config.frequency || 'real-time',
-        protocol: config.protocol?.[0] || 'MQTT',
-        color: 'flow-warning'
-      });
-      flows.push({
-        id: `${system.name}-analytics`,
-        from: system.name,
-        to: 'analytics',
-        dataType: 'Performance Metrics',
-        direction: 'inbound',
-        frequency: config.frequency || 'real-time',
-        protocol: config.protocol?.[0] || 'MQTT',
-        color: 'flow-secondary'
-      });
-    }
-
-    if (system.type === 'Automation') {
-      flows.push({
-        id: `${system.name}-status`,
-        from: system.name,
-        to: 'assets',
-        dataType: 'Machine Status',
-        direction: 'inbound',
-        frequency: config.frequency || 'real-time',
-        protocol: config.protocol?.[0] || 'OPC UA',
-        color: 'flow-primary'
-      });
-    }
-
-    // Outbound flows (from MaintainX) - bidirectional systems
-    if (config.directionality === 'bidirectional' || config.directionality === 'one-way-from') {
-      if (system.type === 'ERP') {
-        flows.push({
-          id: `work-orders-${system.name}`,
-          from: 'work-orders',
-          to: system.name,
-          dataType: 'Work Order Updates',
-          direction: 'outbound',
-          frequency: config.frequency || 'scheduled',
-          protocol: config.protocol?.[0] || 'REST API',
-          color: 'flow-secondary'
-        });
-      }
-      
-      if (system.type === 'Automation') {
-        flows.push({
-          id: `maintenance-${system.name}`,
-          from: 'maintenance',
-          to: system.name,
-          dataType: 'Maintenance Schedules',
-          direction: 'outbound',
-          frequency: config.frequency || 'scheduled',
-          protocol: config.protocol?.[0] || 'OPC UA',
-          color: 'flow-warning'
-        });
-      }
-    }
-
-    return flows;
+    
+    return generateFlowsForNode(system);
   };
 
   useEffect(() => {
@@ -209,7 +89,7 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
           <div className="flex flex-col gap-4">
             {systems.map((system, index) => (
               <div
-                key={`${system.name}-${index}`}
+                key={`${system.id}-${index}`}
                 className={`relative flex items-center gap-3 p-4 rounded-lg border transition-all duration-500 cursor-pointer group ${
                   index === animationIndex 
                     ? "bg-primary/10 border-primary shadow-card animate-pulse-glow" 
@@ -218,28 +98,63 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                 onMouseEnter={() => setHoveredSystem(system.name)}
                 onMouseLeave={() => setHoveredSystem(null)}
               >
+                {/* System logo or initials */}
+                <div className="w-10 h-10 rounded-lg bg-card border border-border/50 flex items-center justify-center relative overflow-hidden">
+                  {system.logo ? (
+                    <img 
+                      src={system.logo} 
+                      alt={`${system.name} logo`}
+                      className="w-8 h-8 object-contain"
+                      onError={(e) => {
+                        // Fallback to initials on image load error
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className={`absolute inset-0 flex items-center justify-center text-xs font-bold text-muted-foreground ${
+                      system.logo ? 'hidden' : 'flex'
+                    }`}
+                  >
+                    {system.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  
+                  {/* SAP special ERP label */}
+                  {system.name === 'SAP' && (
+                    <div className="absolute bottom-0 right-0 bg-primary text-white text-[8px] px-1 rounded-tl-sm font-bold">
+                      ERP
+                    </div>
+                  )}
+                </div>
+                
                 {/* System status indicator */}
                 <div className={`w-3 h-3 rounded-full animate-pulse ${
-                  system.config.frequency === 'real-time' ? 'bg-accent' :
-                  system.config.frequency === 'near-real-time' ? 'bg-warning' : 'bg-primary'
+                  system.frequency === 'real-time' ? 'bg-accent' :
+                  system.frequency === 'near-real-time' ? 'bg-warning' : 'bg-primary'
                 }`}></div>
                 
                 <div className="flex-1">
-                  <div className="font-medium text-sm text-foreground">{system.name}</div>
+                  <div className="font-medium text-sm text-foreground flex items-center gap-2">
+                    {system.name}
+                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                      {system.category}
+                    </span>
+                  </div>
                   <div className="text-xs text-muted-foreground flex items-center gap-2">
-                    <span>{system.type}</span>
-                    {system.config.protocol && (
+                    <span>{system.tier}</span>
+                    {system.protocol.length > 0 && (
                       <>
                         <span>•</span>
-                        <span>{system.config.protocol[0]}</span>
+                        <span>{system.protocol[0]}</span>
                       </>
                     )}
                   </div>
-                  {system.config.frequency && (
-                    <div className="text-xs text-accent font-medium capitalize">
-                      {system.config.frequency.replace('-', ' ')}
-                    </div>
-                  )}
+                  <div className="text-xs text-accent font-medium capitalize">
+                    {system.frequency.replace('-', ' ')}
+                  </div>
                 </div>
 
                 {/* Connection strength indicator */}
