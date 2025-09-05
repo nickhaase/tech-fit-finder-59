@@ -50,7 +50,9 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
     const system = systems[systemIndex];
     if (!system) return [];
     
-    return generateFlowsForNode(system);
+    const flows = generateFlowsForNode(system);
+    console.log(`Generated ${flows.length} flows for system:`, system.name, flows);
+    return flows;
   };
 
   useEffect(() => {
@@ -180,8 +182,8 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
           <div className="hidden lg:block lg:col-span-4 order-3 lg:order-2 relative">
             <div className="h-full flex items-center justify-center">
               <svg 
-                className="w-full h-full max-h-[400px]" 
-                viewBox="0 0 320 400" 
+                className="w-full h-full max-h-[500px]" 
+                viewBox="0 0 320 500" 
                 style={{ zIndex: 1 }}
               >
                 {/* Connection lines */}
@@ -189,7 +191,7 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                   const isInbound = flow.direction === 'inbound';
                   const startX = isInbound ? 20 : 300;
                   const endX = isInbound ? 300 : 20;
-                  const y = 120 + (index * 40); // Better spacing between flows
+                  const y = 120 + (index * 60); // Increased spacing between flows
                   
                   return (
                     <g key={flow.id}>
@@ -209,11 +211,11 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                       {/* Data type label */}
                       <text
                         x={160}
-                        y={y - 10}
+                        y={y - 12}
                         textAnchor="middle"
-                        className="text-xs fill-muted-foreground font-medium"
+                        className="fill-foreground font-semibold"
                         opacity={getConnectionOpacity(flow.id)}
-                        style={{ fontSize: '11px' }}
+                        style={{ fontSize: '14px' }}
                       >
                         {flow.dataType}
                       </text>
@@ -221,11 +223,11 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                       {/* Protocol label */}
                       <text
                         x={160}
-                        y={y + 18}
+                        y={y + 20}
                         textAnchor="middle"
-                        className="text-xs fill-accent font-medium"
+                        className="fill-accent font-medium"
                         opacity={getConnectionOpacity(flow.id)}
-                        style={{ fontSize: '10px' }}
+                        style={{ fontSize: '12px' }}
                       >
                         {flow.protocol}
                       </text>
@@ -247,7 +249,7 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                     className={`absolute w-2 h-2 rounded-full ${particleColor} ${particleClass}`}
                     style={{
                       left: isInbound ? '20px' : '300px',
-                      top: `${120 + (index * 40) - 4}px`,
+                      top: `${120 + (index * 60) - 4}px`,
                       animationDelay: getDataParticleDelay(index),
                       animationDirection: isInbound ? 'normal' : 'reverse'
                     }}
@@ -276,6 +278,7 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                   {maintainXModules.map((module) => {
                     const Icon = module.icon;
                     const isActive = activeFlows.some(f => f.to === module.id || f.from === module.id);
+                    console.log(`Module ${module.id} active:`, isActive, activeFlows);
                     
                     return (
                       <div
@@ -345,6 +348,7 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
               <div className="text-xs text-muted-foreground">
                 Active data flows: {activeFlows.filter(f => {
                   const system = systems.find(s => s.name === hoveredSystem);
+                  console.log(`Checking flows for ${hoveredSystem}:`, system?.id, f.from, f.to);
                   return system && (f.from === system.id || f.to === system.id);
                 }).length}
               </div>
