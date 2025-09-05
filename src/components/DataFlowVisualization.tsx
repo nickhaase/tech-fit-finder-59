@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { AssessmentData } from "@/types/assessment";
-import { ArrowRight, Database, Factory, Zap, BarChart3, Settings, FileText, Wifi } from "lucide-react";
+import { ArrowRight, Database, Factory, Zap, BarChart3, Settings, FileText, Wifi, Download } from "lucide-react";
 import maintainxLogo from "@/assets/logos/maintainx-logo.png";
 import { mapConfigToNodes, Node } from "@/utils/mapConfigToNodes";
 import { generateFlowsForNode, Flow } from "@/utils/generateFlows";
 import { ConfigService } from "@/services/configService";
+import { Button } from "@/components/ui/button";
+import { ExportDialog } from "@/components/ExportDialog";
 
 interface DataFlowVisualizationProps {
   data: AssessmentData;
@@ -25,6 +27,7 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
   const [animationIndex, setAnimationIndex] = useState(0);
   const [activeFlows, setActiveFlows] = useState<Flow[]>([]);
   const [hoveredSystem, setHoveredSystem] = useState<string | null>(null);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   
   // Define MaintainX modules with positions
   const maintainXModules: MaintainXModule[] = [
@@ -91,9 +94,20 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
 
   return (
     <div className="relative bg-gradient-to-br from-background via-primary/5 to-accent/10 rounded-lg border border-border/50 overflow-hidden">
-      <div className="text-center p-6 pb-4">
+      <div className="relative text-center p-6 pb-4">
         <h3 className="text-xl font-semibold mb-2 text-foreground">Live Data Integration with MaintainX</h3>
         <p className="text-sm text-muted-foreground">Real-time bidirectional data flows between your systems</p>
+        
+        {/* Export Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowExportDialog(true)}
+          className="absolute top-6 right-6"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Export
+        </Button>
       </div>
       
       {/* Responsive Grid Layout */}
@@ -381,6 +395,13 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
           />
         ))}
       </div>
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        systems={systems}
+      />
     </div>
   );
 };
