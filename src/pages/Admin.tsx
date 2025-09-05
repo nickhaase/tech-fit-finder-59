@@ -11,6 +11,8 @@ import { SynonymManager } from '@/components/admin/SynonymManager';
 import { BulkImport } from '@/components/admin/BulkImport';
 import { AdminAuth } from '@/components/admin/AdminAuth';
 import { GlobalBrandManager } from '@/components/admin/GlobalBrandManager';
+import { CrossListingManager } from '@/components/admin/CrossListingManager';
+import { TaxonomyPreview } from '@/components/admin/TaxonomyPreview';
 import { Save, Eye, Zap, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -259,15 +261,21 @@ const Admin = () => {
         </Card>
 
         {/* Main Tabs */}
-        <Tabs defaultValue="global-brands" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+        <Tabs defaultValue="taxonomy" className="w-full">
+          <TabsList className="grid w-full grid-cols-8">
+            <TabsTrigger value="taxonomy">Taxonomy</TabsTrigger>
             <TabsTrigger value="global-brands">Global Brands</TabsTrigger>
             <TabsTrigger value="sections">Sections</TabsTrigger>
+            <TabsTrigger value="cross-listing">Cross-Listing</TabsTrigger>
             <TabsTrigger value="synonyms">Synonyms</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Import</TabsTrigger>
             <TabsTrigger value="versions">Versions</TabsTrigger>
             <TabsTrigger value="copy">Copy</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="taxonomy">
+            <TaxonomyPreview config={config} />
+          </TabsContent>
 
           <TabsContent value="global-brands">
             <GlobalBrandManager config={config} onConfigChange={handleConfigChange} />
@@ -275,6 +283,10 @@ const Admin = () => {
 
           <TabsContent value="sections">
             <SectionManager config={config} onConfigChange={handleConfigChange} />
+          </TabsContent>
+
+          <TabsContent value="cross-listing">
+            <CrossListingManager config={config} onConfigChange={handleConfigChange} />
           </TabsContent>
 
           <TabsContent value="synonyms">

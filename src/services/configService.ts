@@ -1,9 +1,13 @@
 import { AppConfig, ConfigVersion } from '@/types/config';
 import { ERP_SYSTEMS, SENSOR_CATEGORIES, AUTOMATION_CATEGORIES, OTHER_SYSTEM_CATEGORIES } from '@/data/brandCatalogs';
+import { MigrationService } from './migrationService';
 
 const CONFIG_KEY = 'mx_config_live';
 const DRAFT_KEY = 'mx_config_draft';
 const VERSIONS_KEY = 'mx_config_versions';
+
+// Import new section data
+import { DATA_ANALYTICS_CATEGORIES, CONNECTIVITY_EDGE_CATEGORY, RESULT_COPY_TEMPLATES } from '@/data/newSectionCatalogs';
 
 // Convert legacy data to new config format
 const createDefaultConfig = (): AppConfig => {
@@ -19,6 +23,7 @@ const createDefaultConfig = (): AppConfig => {
         name: brand.name,
         logo: brand.logo,
         synonyms: brand.commonNames || [],
+        categories: brand.categories,
         state: 'active' as const
       }))
     },
@@ -40,6 +45,7 @@ const createDefaultConfig = (): AppConfig => {
           name: brand.name,
           logo: brand.logo,
           synonyms: brand.commonNames || [],
+          categories: brand.categories,
           state: 'active' as const
         }))
       }))
@@ -51,20 +57,39 @@ const createDefaultConfig = (): AppConfig => {
       multi: true,
       systemOptions: ['None', 'Not sure'],
       options: [],
-      subcategories: AUTOMATION_CATEGORIES.map(cat => ({
-        id: cat.id,
-        label: cat.name,
-        description: cat.description,
-        multi: true,
-        systemOptions: ['None', 'Not sure'],
-        options: cat.brands.map(brand => ({
-          id: brand.id,
-          name: brand.name,
-          logo: brand.logo,
-          synonyms: brand.commonNames || [],
-          state: 'active' as const
-        }))
-      }))
+      subcategories: [
+        ...AUTOMATION_CATEGORIES.map(cat => ({
+          id: cat.id,
+          label: cat.name,
+          description: cat.description,
+          multi: true,
+          systemOptions: ['None', 'Not sure'],
+          options: cat.brands.map(brand => ({
+            id: brand.id,
+            name: brand.name,
+            logo: brand.logo,
+            synonyms: brand.commonNames || [],
+            categories: brand.categories,
+            state: 'active' as const
+          }))
+        })),
+        // Add Connectivity & Edge subcategory
+        {
+          id: CONNECTIVITY_EDGE_CATEGORY.id,
+          label: CONNECTIVITY_EDGE_CATEGORY.name,
+          description: CONNECTIVITY_EDGE_CATEGORY.description,
+          multi: true,
+          systemOptions: ['None', 'Not sure'],
+          options: CONNECTIVITY_EDGE_CATEGORY.brands.map(brand => ({
+            id: brand.id,
+            name: brand.name,
+            logo: brand.logo,
+            synonyms: brand.commonNames || [],
+            categories: brand.categories,
+            state: 'active' as const
+          }))
+        }
+      ]
     },
     {
       id: 'other_systems',
@@ -84,30 +109,70 @@ const createDefaultConfig = (): AppConfig => {
           name: brand.name,
           logo: brand.logo,
           synonyms: brand.commonNames || [],
+          categories: brand.categories,
+          state: 'active' as const
+        }))
+      }))
+    },
+    // Add Data & Analytics section
+    {
+      id: 'data_analytics',
+      label: 'Data & Analytics',
+      description: 'Data platforms, historians, and analytics systems',
+      multi: true,
+      systemOptions: ['None', 'Not sure'],
+      options: [],
+      subcategories: DATA_ANALYTICS_CATEGORIES.map(cat => ({
+        id: cat.id,
+        label: cat.name,
+        description: cat.description,
+        multi: true,
+        systemOptions: ['None', 'Not sure'],
+        state: ['bi', 'etl', 'governance'].includes(cat.id) ? 'optional' as const : 'active' as const,
+        options: cat.brands.map(brand => ({
+          id: brand.id,
+          name: brand.name,
+          logo: brand.logo,
+          synonyms: brand.commonNames || [],
+          categories: brand.categories,
           state: 'active' as const
         }))
       }))
     }
   ];
 
+  // Add alias for Platforms/Historians in Sensors section
+  const sensorsSection = sections.find(s => s.id === 'sensors_monitoring');
+  if (sensorsSection && sensorsSection.subcategories) {
+    const historiansAlias = sensorsSection.subcategories.find(sub => sub.id === 'platforms_historians');
+    if (historiansAlias) {
+      // Cast to include aliasOf property
+      (historiansAlias as any).aliasOf = 'data_analytics.historians';
+      historiansAlias.description = 'Data collection and historian platforms (→ Data & Analytics)';
+    }
+  }
+
   return {
-    schemaVersion: 1,
+    schemaVersion: 2, // Increment for new taxonomy
     status: 'published',
     updatedAt: new Date().toISOString(),
     sections,
+    crossListingEnabled: true,
     synonymMap: {
       'Wonderware': 'AVEVA/Wonderware',
       'Agora': 'Kojo (Formerly Agora Systems)',
       'System Platform': 'AVEVA/Wonderware'
     },
-    resultCopy: {
-      headers: {
-        architecture: 'Your Custom MaintainX Integration Architecture'
-      },
-      perBrand: {
-        defaultTemplate: 'MaintainX integrates with {brand} via {protocol} to sync {objects} ({directionality}, {frequency}).'
+      resultCopy: {
+        headers: {
+          'data_analytics': 'Data & Analytics Integration',
+          'connectivity_edge': 'Edge Connectivity & Protocols'
+        },
+        perBrand: {
+          defaultTemplate: "MaintainX integrates with {brand} to sync {objects} and enhance {workflow}.",
+          ...RESULT_COPY_TEMPLATES
+        }
       }
-    }
   };
 };
 
@@ -121,6 +186,15 @@ export class ConfigService {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
+        
+        // Check if migration is needed
+        if (!parsed.schemaVersion || parsed.schemaVersion < 2) {
+          console.log('🔄 Running taxonomy migration...');
+          const migratedConfig = MigrationService.runTaxonomyMigration(parsed);
+          this.publish(migratedConfig);
+          return migratedConfig;
+        }
+        
         console.log('✅ Successfully parsed stored config:', {
           sectionsCount: parsed.sections?.length || 0,
           status: parsed.status,

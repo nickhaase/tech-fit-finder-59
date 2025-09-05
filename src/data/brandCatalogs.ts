@@ -136,7 +136,7 @@ export const SENSOR_CATEGORIES: CategoryOption[] = [
     {
       id: 'platforms_historians',
       name: 'Platforms/Historians',
-      description: 'Data collection and historian platforms',
+      description: 'Data collection and historian platforms (→ Data & Analytics)',
       brands: [
         { id: 'osisoft_pi', name: 'OSIsoft/AVEVA PI', commonNames: ['PI System', 'AVEVA PI'] },
         { id: 'canary', name: 'Canary', commonNames: ['Canary Labs'] },
@@ -156,7 +156,12 @@ export const AUTOMATION_CATEGORIES: CategoryOption[] = [
     description: 'Supervisory Control and Data Acquisition systems',
     brands: [
       { id: 'aveva_wonderware', name: 'AVEVA/Wonderware', commonNames: ['Wonderware', 'System Platform'] },
-      { id: 'ignition', name: 'Ignition', commonNames: ['Inductive Automation'] },
+      { 
+        id: 'ignition', 
+        name: 'Ignition', 
+        commonNames: ['Inductive Automation'],
+        categories: ['automation.scada', 'data_analytics.historians'] // Cross-listing
+      },
       { id: 'ge_ifix', name: 'GE iFIX', commonNames: ['iFIX'] },
       { id: 'ge_cimplicity', name: 'GE CIMPLICITY', commonNames: ['CIMPLICITY'] },
       { id: 'siemens_wincc', name: 'Siemens WinCC', commonNames: ['WinCC'], logo: siemensLogo },

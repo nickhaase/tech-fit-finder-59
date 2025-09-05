@@ -3,17 +3,40 @@ export interface BrandOption {
   name: string;
   logo?: string;
   synonyms: string[];
+  categories?: string[]; // Cross-listing: which sections this brand appears in
   meta?: {
     categories?: string[];
+    crossListed?: boolean; // For UI purposes
     brandFollowups?: {
       edition?: string[];
       method?: string[];
       objects?: string[];
       directionality?: string[];
       frequency?: string[];
+      // New advanced question types
+      gateway?: string[];
+      protocols?: string[];
+      broker?: string[];
+      deployment?: string[];
+      security?: string[];
+      platform?: string[];
+      movement?: string[];
+      updateMode?: string[];
+      interfaces?: string[];
+      retention?: string[];
+      pattern?: string[];
+      serialization?: string[];
+      tool?: string[];
+      modeling?: string[];
+      refresh?: string[];
+      audience?: string[];
+      tooling?: string[];
+      schedule?: string[];
+      catalog?: string[];
+      policies?: string[];
     };
   };
-  state: 'active' | 'deprecated' | 'hidden';
+  state: 'active' | 'deprecated' | 'hidden' | 'optional';
   globalId?: string; // Reference to global brand
   assignedSections?: string[]; // Which sections this brand is assigned to
 }
@@ -36,6 +59,8 @@ export interface ConfigSection {
   options: BrandOption[];
   systemOptions: string[]; // ['None', 'Not sure']
   subcategories?: ConfigSection[];
+  aliasOf?: string; // Points to another section (e.g., "data_analytics.historians")
+  state?: 'active' | 'optional' | 'hidden'; // Optional sections
 }
 
 export interface AppConfig {
@@ -45,10 +70,16 @@ export interface AppConfig {
   sections: ConfigSection[];
   synonymMap: Record<string, string>;
   globalBrands?: GlobalBrand[]; // Global brand library
+  crossListingEnabled?: boolean; // Enable cross-section brand listing
   resultCopy: {
     headers: Record<string, string>;
     perBrand: {
       defaultTemplate: string;
+      // New templates for expanded sections
+      warehouse_lakehouse?: string;
+      historians?: string;
+      streaming?: string;
+      connectivity_edge?: string;
     };
   };
 }

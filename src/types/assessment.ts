@@ -70,6 +70,7 @@ export interface BrandOption {
   commonNames?: string[];
   description?: string;
   logo?: string;
+  categories?: string[]; // Cross-listing: which sections this brand appears in
 }
 
 export interface CategoryOption {
