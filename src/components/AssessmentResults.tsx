@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,46 @@ interface AssessmentResultsProps {
 
 export const AssessmentResults = ({ data, onRestart }: AssessmentResultsProps) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Fetch and display company logo if available
+  useEffect(() => {
+    const loadCompanyLogo = async () => {
+      if (data.companyName && data.uniqueUrl) {
+        try {
+          // Query the companies table to get the logo
+          const { supabase } = await import("@/integrations/supabase/client");
+          const { data: companies } = await supabase
+            .from('companies')
+            .select('logo_url')
+            .eq('name', data.companyName)
+            .single();
+
+          if (companies?.logo_url) {
+            const logoPlaceholder = document.getElementById('company-logo-placeholder');
+            if (logoPlaceholder) {
+              logoPlaceholder.innerHTML = `
+                <img 
+                  src="${companies.logo_url}" 
+                  alt="${data.companyName} logo" 
+                  class="w-12 h-12 rounded-lg object-contain"
+                  onError="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                />
+                <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center" style="display:none;">
+                  <svg class="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                  </svg>
+                </div>
+              `;
+            }
+          }
+        } catch (error) {
+          console.error('Error loading company logo:', error);
+        }
+      }
+    };
+
+    loadCompanyLogo();
+  }, [data.companyName, data.uniqueUrl]);
   const [animatedCounts, setAnimatedCounts] = useState({ integrations: 0, compatibility: 0, goals: 0 });
   const { toast } = useToast();
   const totalIntegrations = data.scorecard.integrationsFound;

@@ -62,6 +62,8 @@ export interface AssessmentData {
     goalsMatched: number;
     complexity: 'Low' | 'Medium' | 'High';
   };
+  companyName?: string;
+  uniqueUrl?: string;
 }
 
 export interface BrandOption {

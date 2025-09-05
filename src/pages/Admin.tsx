@@ -7,6 +7,7 @@ import { ConfigService } from '@/services/configService';
 import { AppConfig } from '@/types/config';
 import { SectionManager } from '@/components/admin/SectionManager';
 import { VersionManager } from '@/components/admin/VersionManager';
+import { SubmissionsManager } from '@/components/admin/SubmissionsManager';
 import { SynonymManager } from '@/components/admin/SynonymManager';
 import { BulkImport } from '@/components/admin/BulkImport';
 import { AdminAuth } from '@/components/admin/AdminAuth';
@@ -339,6 +340,10 @@ const Admin = () => {
 
           <TabsContent value="versions">
             <VersionManager onConfigRestore={loadConfig} />
+          </TabsContent>
+
+          <TabsContent value="submissions">
+            <SubmissionsManager />
           </TabsContent>
 
           <TabsContent value="copy">

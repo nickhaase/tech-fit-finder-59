@@ -14,7 +14,109 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      assessment_results: {
+        Row: {
+          assessment_id: string
+          created_at: string
+          id: string
+          scorecard_data: Json
+          updated_at: string
+          visualizations: Json | null
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string
+          id?: string
+          scorecard_data: Json
+          updated_at?: string
+          visualizations?: Json | null
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string
+          id?: string
+          scorecard_data?: Json
+          updated_at?: string
+          visualizations?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_results_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessments: {
+        Row: {
+          assessment_data: Json
+          company_id: string | null
+          created_at: string
+          id: string
+          unique_url: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_data: Json
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          unique_url?: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_data?: Json
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          unique_url?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          created_at: string
+          id: string
+          industry: string | null
+          logo_cached_at: string | null
+          logo_url: string | null
+          name: string
+          size: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          industry?: string | null
+          logo_cached_at?: string | null
+          logo_url?: string | null
+          name: string
+          size?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          industry?: string | null
+          logo_cached_at?: string | null
+          logo_url?: string | null
+          name?: string
+          size?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
