@@ -29,7 +29,6 @@ import {
 
 import { BrandPicker } from "@/components/BrandPicker";
 import { FollowUpQuestions } from "@/components/FollowUpQuestions";
-import { CompanyNameStep } from "./CompanyNameStep";
 import { AssessmentData, IntegrationDetail, SensorIntegration, AutomationIntegration, OtherSystemIntegration } from "@/types/assessment";
 import { ConfigService } from "@/services/configService";
 import { AppConfig } from "@/types/config";
@@ -46,7 +45,6 @@ interface NewTechStackAssessmentProps {
 
 export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentProps) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [showCompanyStep, setShowCompanyStep] = useState(false);
   const [mode, setMode] = useState<'quick' | 'advanced'>('quick');
   const [config, setConfig] = useState<AppConfig>(() => ConfigService.getLive());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -321,57 +319,9 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       scorecard: calculateScorecard()
     };
 
-    setShowCompanyStep(true);
-  };
-
-  const handleCompanyComplete = (companyName: string) => {
-    const assessmentData: AssessmentData = {
-      mode,
-      company: {
-        size: companySize as any,
-        industry
-      },
-      goals,
-      kpis: mode === 'advanced' ? kpis : undefined,
-      timeline: mode === 'advanced' ? timeline : undefined,
-      stakeholder: mode === 'advanced' ? stakeholder : undefined,
-      integrations: {
-        erp: erp || undefined,
-        sensorsMonitoring,
-        automationScada,
-        otherSystems
-      },
-      integrationPatterns: generateIntegrationPatterns(),
-      scorecard: calculateScorecard(),
-      companyName
-    };
-
     onComplete(assessmentData);
   };
 
-  const handleCompanySkip = () => {
-    const assessmentData: AssessmentData = {
-      mode,
-      company: {
-        size: companySize as any,
-        industry
-      },
-      goals,
-      kpis: mode === 'advanced' ? kpis : undefined,
-      timeline: mode === 'advanced' ? timeline : undefined,
-      stakeholder: mode === 'advanced' ? stakeholder : undefined,
-      integrations: {
-        erp: erp || undefined,
-        sensorsMonitoring,
-        automationScada,
-        otherSystems
-      },
-      integrationPatterns: generateIntegrationPatterns(),
-      scorecard: calculateScorecard()
-    };
-
-    onComplete(assessmentData);
-  };
 
   const generateIntegrationPatterns = () => {
     const patterns = [];

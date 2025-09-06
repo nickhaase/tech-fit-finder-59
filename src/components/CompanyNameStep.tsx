@@ -3,20 +3,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building, CheckCircle } from "lucide-react";
+import { Building, CheckCircle, Share2, Database, Link } from "lucide-react";
 
 interface CompanyNameStepProps {
-  onComplete: (companyName: string) => void;
-  onSkip: () => void;
+  onSaveToDatabase: (companyName: string) => void;
+  onShareWithCompany: (companyName: string) => void;
+  onShareAnonymous: () => void;
 }
 
-export const CompanyNameStep = ({ onComplete, onSkip }: CompanyNameStepProps) => {
+export const CompanyNameStep = ({ onSaveToDatabase, onShareWithCompany, onShareAnonymous }: CompanyNameStepProps) => {
   const [companyName, setCompanyName] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSaveToDatabase = (e: React.FormEvent) => {
     e.preventDefault();
     if (companyName.trim()) {
-      onComplete(companyName.trim());
+      onSaveToDatabase(companyName.trim());
+    }
+  };
+
+  const handleShareWithCompany = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (companyName.trim()) {
+      onShareWithCompany(companyName.trim());
     }
   };
 
@@ -36,10 +44,10 @@ export const CompanyNameStep = ({ onComplete, onSkip }: CompanyNameStepProps) =>
         </CardHeader>
         
         <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="company-name" className="text-sm font-medium">
-                Company Name
+                Company Name (Optional)
               </Label>
               <Input
                 id="company-name"
@@ -50,35 +58,52 @@ export const CompanyNameStep = ({ onComplete, onSkip }: CompanyNameStepProps) =>
                 className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               />
               <p className="text-xs text-muted-foreground">
-                We'll use this to find your company logo and personalize the results
+                Adding a company name helps personalize results and fetches your logo
               </p>
             </div>
 
             <div className="flex flex-col gap-3 pt-4">
-              <Button 
-                type="submit" 
-                disabled={!companyName.trim()}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Continue with {companyName || 'Company Name'}
-              </Button>
+              <form onSubmit={handleSaveToDatabase}>
+                <Button 
+                  type="submit" 
+                  disabled={!companyName.trim()}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  <Database className="w-4 h-4 mr-2" />
+                  Save Assessment with Company Name
+                </Button>
+              </form>
+              
+              <form onSubmit={handleShareWithCompany}>
+                <Button 
+                  type="submit"
+                  disabled={!companyName.trim()}
+                  variant="outline" 
+                  className="w-full"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Share via URL with Company Name
+                </Button>
+              </form>
               
               <Button 
                 type="button" 
-                variant="outline" 
-                onClick={onSkip}
+                variant="secondary" 
+                onClick={onShareAnonymous}
                 className="w-full"
               >
-                Skip for now
+                <Link className="w-4 h-4 mr-2" />
+                Share via URL (Anonymous)
               </Button>
             </div>
-          </form>
+          </div>
 
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">
-              This information helps us create a more personalized experience
-            </p>
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <div className="bg-muted/50 p-3 rounded-lg space-y-2">
+              <p><strong>Save to Database:</strong> Enables logo fetching and admin visibility</p>
+              <p><strong>Share with Company:</strong> URL includes company name for personalization</p>
+              <p><strong>Anonymous Share:</strong> No company data stored or shared</p>
+            </div>
           </div>
         </CardContent>
       </Card>

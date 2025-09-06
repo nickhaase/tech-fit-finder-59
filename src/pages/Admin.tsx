@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,39 +11,57 @@ import { VersionManager } from '@/components/admin/VersionManager';
 import { SubmissionsManager } from '@/components/admin/SubmissionsManager';
 import { SynonymManager } from '@/components/admin/SynonymManager';
 import { BulkImport } from '@/components/admin/BulkImport';
-import { AdminAuth } from '@/components/admin/AdminAuth';
 import { GlobalBrandManager } from '@/components/admin/GlobalBrandManager';
 import { CrossListingManager } from '@/components/admin/CrossListingManager';
 import { TaxonomyPreview } from '@/components/admin/TaxonomyPreview';
 import { ImportManager } from '@/components/admin/ImportManager';
-import { Save, Eye, Zap, Download } from 'lucide-react';
+import { Save, Eye, Zap, Download, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { createTestAssessment } from '@/utils/testAssessment';
+import { supabase } from '@/integrations/supabase/client';
 
 const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [isDraft, setIsDraft] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if already authenticated
-    const auth = localStorage.getItem('mx_admin_auth');
-    if (auth) {
-      try {
-        const { timestamp } = JSON.parse(auth);
-        // Session valid for 24 hours
-        if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
-          setIsAuthenticated(true);
-          loadConfig();
-        }
-      } catch (e) {
-        localStorage.removeItem('mx_admin_auth');
+    // Check if user is authenticated with Supabase
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user?.email === 'nick@getmaintainx.com') {
+        setIsAuthenticated(true);
+        setCurrentUser(session.user);
+        loadConfig();
+      } else {
+        // Redirect to auth page if not authenticated
+        navigate('/auth');
       }
-    }
-  }, []);
+    };
+
+    checkAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user?.email === 'nick@getmaintainx.com') {
+        setIsAuthenticated(true);
+        setCurrentUser(session.user);
+        if (!config) loadConfig();
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        navigate('/auth');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, config]);
 
   // Prompt to restore pre-migration snapshot if detected
   useEffect(() => {
@@ -107,9 +126,9 @@ const Admin = () => {
     }
   };
 
-  const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
-    loadConfig();
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
   };
 
   const handleSaveDraft = () => {
@@ -206,7 +225,14 @@ const Admin = () => {
   };
 
   if (!isAuthenticated) {
-    return <AdminAuth onAuthSuccess={handleAuthSuccess} />;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!config) {
