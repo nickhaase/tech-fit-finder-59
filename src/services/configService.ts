@@ -13,9 +13,14 @@ export class ConfigService {
   private static config: AppConfig | null = null;
   private static isLoading = false;
 
-  // Convert legacy data to new config format
+  // Convert legacy data to new config format - FULLY ASYNC
   private static async createDefaultConfig(): Promise<AppConfig> {
     console.log('[createDefaultConfig] Creating default config...');
+    
+    // Ensure feature flags are initialized before creating config
+    const { featureFlagInitializer } = await import('@/services/featureFlagInitializer');
+    await featureFlagInitializer.initialize();
+    console.log('[createDefaultConfig] Feature flags initialized');
 
     const sections = [
       {
@@ -131,9 +136,9 @@ export class ConfigService {
         multi: true,
         systemOptions: ['None', 'Not sure'],
         options: [],
-        subcategories: (() => {
+        subcategories: await (async () => {
           console.log('[createDefaultConfig] Building data analytics subcategories...');
-          const categories = getDataAnalyticsCategories();
+          const categories = await this.getDataAnalyticsCategoriesAsync();
           console.log('[createDefaultConfig] Got', categories.length, 'data analytics categories');
           return categories.map(cat => ({
           id: cat.id,
@@ -207,9 +212,10 @@ export class ConfigService {
     this.isLoading = true;
     try {
       console.log('🔄 Loading live config...');
-      // Wait for feature flags to be initialized before generating config
+      // Ensure feature flags are initialized before generating config
       const { featureFlagInitializer } = await import('@/services/featureFlagInitializer');
       await featureFlagInitializer.initialize();
+      console.log('🏁 Feature flags ready, loading config...');
       
       this.config = await this.loadConfig();
       console.log('✅ Live config loaded successfully');
@@ -217,6 +223,16 @@ export class ConfigService {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  // Clear config cache to force regeneration (called when feature flags change)
+  static invalidateConfig(): void {
+    console.log('🗑️ Invalidating config cache...');
+    this.config = null;
+    // Also clear localStorage to force fresh generation
+    localStorage.removeItem('appConfig');
+    // Dispatch event to notify components
+    window.dispatchEvent(new CustomEvent('configInvalidated'));
   }
 
   static getLive(): AppConfig {
@@ -940,5 +956,28 @@ export class ConfigService {
       total,
       remaining: total - used
     };
+  }
+
+  // Async helper methods for feature flag dependent data
+  private static async getDataAnalyticsCategoriesAsync() {
+    const { isFeatureEnabled } = await import('@/config/features');
+    const { getDataAnalyticsCategories } = await import('@/data/newSectionCatalogs');
+    
+    console.log('[getDataAnalyticsCategoriesAsync] Getting data analytics categories...');
+    const foundryEnabled = await isFeatureEnabled('FOUNDRY');
+    console.log('[getDataAnalyticsCategoriesAsync] FOUNDRY enabled:', foundryEnabled);
+    
+    return getDataAnalyticsCategories();
+  }
+
+  private static async getFoundrySynonymsAsync() {
+    const { isFeatureEnabled } = await import('@/config/features');
+    const { getFoundrySynonyms } = await import('@/data/foundryBrands');
+    
+    console.log('[getFoundrySynonymsAsync] Getting Foundry synonyms...');
+    const foundryEnabled = await isFeatureEnabled('FOUNDRY');
+    console.log('[getFoundrySynonymsAsync] FOUNDRY enabled:', foundryEnabled);
+    
+    return getFoundrySynonyms();
   }
 }

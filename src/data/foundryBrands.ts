@@ -1,5 +1,5 @@
 import { CategoryOption } from '@/types/assessment';
-import { isFeatureEnabledSync } from '../config/features';
+import { isFeatureEnabled, isFeatureEnabledSync } from '../config/features';
 
 // Palantir Foundry brand definition (gated by feature flag)
 export function getFoundryBrands(): CategoryOption[] {
@@ -12,6 +12,37 @@ export function getFoundryBrands(): CategoryOption[] {
   }
 
   console.log('[getFoundryBrands] FOUNDRY enabled, returning Palantir Foundry brands');
+
+  return [
+    {
+      id: 'dataops_integration',
+      name: 'DataOps/Integration Platforms',
+      description: 'Advanced data operations and integration platforms for insights-driven workflows',
+      brands: [
+        {
+          id: 'palantir_foundry',
+          name: 'Palantir Foundry',
+          commonNames: ['Foundry', 'Palantir'],
+          logo: '/assets/logos/brands/palantir.svg', // Optional - will fallback to initials
+          categories: ['data_analytics.dataops_integration'],
+          description: 'DataOps platform for operational intelligence and automated decision-making'
+        }
+      ]
+    }
+  ];
+}
+
+// Async version for proper feature flag loading
+export async function getFoundryBrandsAsync(): Promise<CategoryOption[]> {
+  const foundryEnabled = await isFeatureEnabled('FOUNDRY');
+  console.log('[getFoundryBrandsAsync] FOUNDRY feature flag check:', foundryEnabled);
+  
+  if (!foundryEnabled) {
+    console.log('[getFoundryBrandsAsync] FOUNDRY disabled, returning empty array');
+    return [];
+  }
+
+  console.log('[getFoundryBrandsAsync] FOUNDRY enabled, returning Palantir Foundry brands');
 
   return [
     {

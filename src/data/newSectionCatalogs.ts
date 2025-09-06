@@ -1,5 +1,5 @@
 import { CategoryOption } from '@/types/assessment';
-import { getFoundryBrands } from './foundryBrands';
+import { getFoundryBrands, getFoundryBrandsAsync } from './foundryBrands';
 
 // Base Data & Analytics Categories (without feature-flagged content)
 const BASE_DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
@@ -96,6 +96,23 @@ export function getDataAnalyticsCategories(): CategoryOption[] {
     categories.push(...foundryBrands);
   } else {
     console.log('[getDataAnalyticsCategories] No Foundry categories to add');
+  }
+  
+  return categories;
+}
+
+// Async version for proper feature flag loading
+export async function getDataAnalyticsCategoriesAsync(): Promise<CategoryOption[]> {
+  console.log('[getDataAnalyticsCategoriesAsync] Building categories dynamically...');
+  const categories = [...BASE_DATA_ANALYTICS_CATEGORIES];
+  
+  // Add Foundry brands conditionally (async check)
+  const foundryBrands = await getFoundryBrandsAsync();
+  if (foundryBrands.length > 0) {
+    console.log('[getDataAnalyticsCategoriesAsync] Adding Foundry categories:', foundryBrands.length);
+    categories.push(...foundryBrands);
+  } else {
+    console.log('[getDataAnalyticsCategoriesAsync] No Foundry categories to add');
   }
   
   return categories;

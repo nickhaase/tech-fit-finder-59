@@ -229,6 +229,24 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       }
     };
 
+    const handleConfigInvalidated = async () => {
+      console.log('🗑️ Config invalidated, forcing fresh load...');
+      try {
+        setIsLoading(true);
+        const freshConfig = await ConfigService.getLiveConfig();
+        setConfig(freshConfig);
+        console.log('✅ Fresh config loaded after invalidation');
+        toast({
+          title: "Configuration updated",
+          description: "Feature flags changed, configuration refreshed",
+        });
+      } catch (error) {
+        console.error('❌ Failed to load fresh config after invalidation:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     const handleFocus = () => {
       console.log('👁️ Window focus detected, checking for config updates');
       refreshConfig();
@@ -239,6 +257,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
     window.addEventListener('configUpdated', handleConfigUpdate as EventListener);
     window.addEventListener('forceConfigRefresh', handleForceRefresh as EventListener);
     window.addEventListener('featureFlagsReady', handleFeatureFlagsReady);
+    window.addEventListener('configInvalidated', handleConfigInvalidated);
     window.addEventListener('focus', handleFocus);
 
     // Check for updates every 5 seconds when page is visible
@@ -269,6 +288,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       window.removeEventListener('configUpdated', handleConfigUpdate as EventListener);
       window.removeEventListener('forceConfigRefresh', handleForceRefresh as EventListener);
       window.removeEventListener('featureFlagsReady', handleFeatureFlagsReady);
+      window.removeEventListener('configInvalidated', handleConfigInvalidated);
       window.removeEventListener('focus', handleFocus);
       clearInterval(intervalId);
     };

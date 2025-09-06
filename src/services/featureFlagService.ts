@@ -73,6 +73,14 @@ class FeatureFlagService {
     this.cache.set(flagName, enabled);
     this.refreshCacheExpiry();
 
+    // If this is a config-affecting flag, invalidate config
+    if (flagName === 'FOUNDRY') {
+      console.log('🔄 FOUNDRY flag changed, invalidating config...');
+      // Dynamically import to avoid circular dependency
+      const { ConfigService } = await import('@/services/configService');
+      ConfigService.invalidateConfig();
+    }
+
     return true;
   }
 
