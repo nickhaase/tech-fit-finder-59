@@ -122,7 +122,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_assessment_bundle_by_unique_url: {
+        Args: { u: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

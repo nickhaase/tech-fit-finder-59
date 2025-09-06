@@ -68,30 +68,24 @@ export class AssessmentService {
 
   static async getAssessmentByUrl(uniqueUrl: string): Promise<{ assessment: Assessment; results: AssessmentResult } | null> {
     try {
-      const { data: assessment, error: assessmentError } = await supabase
-        .from('assessments')
-        .select(`
-          *,
-          company:companies(*)
-        `)
-        .eq('unique_url', uniqueUrl)
-        .single();
+      // Use secure RPC to fetch a single assessment bundle by unique URL
+      const { data, error } = await supabase.rpc('get_assessment_bundle_by_unique_url', { u: uniqueUrl });
 
-      if (assessmentError || !assessment) {
+      if (error || !data) {
         return null;
       }
 
-      const { data: results, error: resultsError } = await supabase
-        .from('assessment_results')
-        .select('*')
-        .eq('assessment_id', assessment.id)
-        .single();
+      const bundle = data as any;
+      const assessment = bundle.assessment as Assessment | null;
+      const results = bundle.results as AssessmentResult | null;
 
-      if (resultsError) throw resultsError;
+      if (!assessment || !results) {
+        return null;
+      }
 
       return { assessment, results };
     } catch (error) {
-      console.error('Error fetching assessment:', error);
+      console.error('Error fetching assessment via RPC:', error);
       return null;
     }
   }
