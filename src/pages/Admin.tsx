@@ -15,6 +15,7 @@ import { GlobalBrandManager } from '@/components/admin/GlobalBrandManager';
 import { CrossListingManager } from '@/components/admin/CrossListingManager';
 import { TaxonomyPreview } from '@/components/admin/TaxonomyPreview';
 import { ImportManager } from '@/components/admin/ImportManager';
+import { FeatureFlagManager } from '@/components/admin/FeatureFlagManager';
 import { Save, Eye, Zap, Download, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
@@ -351,7 +352,7 @@ const Admin = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="taxonomy" className="w-full">
-          <TabsList className="grid w-full grid-cols-10">
+          <TabsList className="grid w-full grid-cols-11">
             <TabsTrigger value="taxonomy">Taxonomy</TabsTrigger>
             <TabsTrigger value="global-brands">Global Brands</TabsTrigger>
             <TabsTrigger value="sections">Sections</TabsTrigger>
@@ -361,6 +362,7 @@ const Admin = () => {
             <TabsTrigger value="bulk">Bulk Import</TabsTrigger>
             <TabsTrigger value="versions">Versions</TabsTrigger>
             <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsTrigger value="features">Features</TabsTrigger>
             <TabsTrigger value="copy">Copy</TabsTrigger>
           </TabsList>
 
@@ -398,6 +400,10 @@ const Admin = () => {
 
           <TabsContent value="submissions">
             <SubmissionsManager />
+          </TabsContent>
+
+          <TabsContent value="features">
+            <FeatureFlagManager />
           </TabsContent>
 
           <TabsContent value="copy">
