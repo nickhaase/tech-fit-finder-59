@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,12 +12,13 @@ interface VersionManagerProps {
 }
 
 export const VersionManager = ({ onConfigRestore }: VersionManagerProps) => {
-  const [versions] = useState<ConfigVersion[]>(ConfigService.listVersions());
+  const [versions, setVersions] = useState<ConfigVersion[]>(ConfigService.listVersions());
   const { toast } = useToast();
 
   const handleRollback = (versionId: string) => {
     try {
       ConfigService.rollback(versionId);
+      setVersions(ConfigService.listVersions());
       onConfigRestore();
       toast({
         title: "Configuration Restored",
@@ -35,6 +36,7 @@ export const VersionManager = ({ onConfigRestore }: VersionManagerProps) => {
   const handleCreateSnapshot = () => {
     try {
       ConfigService.createSnapshot('Pre-Global-Brands Snapshot');
+      setVersions(ConfigService.listVersions());
       toast({
         title: "Snapshot Created",
         description: "Current configuration saved as 'Pre-Global-Brands Snapshot'."
@@ -47,6 +49,22 @@ export const VersionManager = ({ onConfigRestore }: VersionManagerProps) => {
       });
     }
   };
+
+  useEffect(() => {
+    const refresh = () => setVersions(ConfigService.listVersions());
+    refresh();
+
+    const onUpdated = () => refresh();
+    window.addEventListener('versionsUpdated', onUpdated as EventListener);
+    window.addEventListener('configUpdated', onUpdated as EventListener);
+    window.addEventListener('forceConfigRefresh', onUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener('versionsUpdated', onUpdated as EventListener);
+      window.removeEventListener('configUpdated', onUpdated as EventListener);
+      window.removeEventListener('forceConfigRefresh', onUpdated as EventListener);
+    };
+  }, []);
 
   const handleExportVersion = (version: ConfigVersion) => {
     const blob = new Blob([JSON.stringify(version.config, null, 2)], { type: 'application/json' });

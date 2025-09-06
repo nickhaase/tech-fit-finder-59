@@ -199,11 +199,11 @@ export class ConfigService {
 
   // Clear config cache to force regeneration
   static invalidateConfig(): void {
-    console.log('🗑️ Invalidating config cache...');
+    console.log('🧹 Invalidating config cache (memory only)...');
     this.config = null;
-    localStorage.removeItem('mx_config_live');
-    // Dispatch event to notify components
+    // Notify listeners to refresh without deleting persisted config
     window.dispatchEvent(new CustomEvent('configInvalidated'));
+    window.dispatchEvent(new CustomEvent('forceConfigRefresh', { detail: { source: 'invalidateConfig' } }));
   }
 
   static getLive(): AppConfig {
@@ -613,6 +613,14 @@ export class ConfigService {
 
       localStorage.removeItem(DRAFT_KEY);
       console.log('🗑️ Draft removed');
+
+      // If this is the first-ever publish, create an initial snapshot
+      if (!currentStored) {
+        const existingVersions = this.listVersions();
+        if (existingVersions.length === 0) {
+          this.saveVersion(configToPublish, 'Initial publish');
+        }
+      }
       
       // Enhanced notification system for cross-component updates
       const logoCount = configToPublish.sections.reduce((acc, s) => 
@@ -680,6 +688,9 @@ export class ConfigService {
     }
 
     localStorage.setItem(VERSIONS_KEY, JSON.stringify(versions));
+
+    // Notify listeners that versions have changed
+    window.dispatchEvent(new CustomEvent('versionsUpdated', { detail: { count: versions.length } }));
   }
 
   static createSnapshot(description: string = 'Manual Snapshot'): void {

@@ -73,12 +73,10 @@ class FeatureFlagService {
     this.cache.set(flagName, enabled);
     this.refreshCacheExpiry();
 
-    // If this is a config-affecting flag, invalidate config
+    // If this is a config-affecting flag, notify listeners to refresh safely
     if (flagName === 'FOUNDRY') {
-      console.log('🔄 FOUNDRY flag changed, invalidating config...');
-      // Dynamically import to avoid circular dependency
-      const { ConfigService } = await import('@/services/configService');
-      ConfigService.invalidateConfig();
+      console.log('🔄 FOUNDRY flag changed, requesting safe config refresh...');
+      window.dispatchEvent(new CustomEvent('forceConfigRefresh', { detail: { source: 'feature-flag', flagName, enabled } }));
     }
 
     return true;
