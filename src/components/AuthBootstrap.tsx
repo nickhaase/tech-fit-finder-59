@@ -9,8 +9,14 @@ export const AuthBootstrap = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Initialize feature flags early in app lifecycle
-    featureFlagInitializer.initialize().catch(console.error);
+    const initializeApp = async () => {
+      // Initialize feature flags at app startup and wait for completion
+      console.log('🚀 Starting app initialization...');
+      await featureFlagInitializer.initialize();
+      console.log('✅ App initialization complete');
+    };
+
+    initializeApp();
     
     // Check for auth tokens in URL hash (for password reset, magic links, etc.)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));

@@ -37,6 +37,7 @@ export function isFeatureEnabledSync(feature: keyof FeatureFlags): boolean {
       // Use the public getCachedFlag method instead of private cache access
       const cached = featureFlagService.getCachedFlag(feature);
       console.log(`[features] FOUNDRY flag cache check: ${cached}`);
+      // Return true only if explicitly cached as true, false for null or false
       return cached === true;
     }
     

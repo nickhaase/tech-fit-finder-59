@@ -47,13 +47,15 @@ interface NewTechStackAssessmentProps {
 export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [mode, setMode] = useState<'quick' | 'advanced'>('quick');
-  const [config, setConfig] = useState<AppConfig>(() => ConfigService.getLive());
+  const [config, setConfig] = useState<AppConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const { toast } = useToast();
 
   // Helper to resolve section aliases
   const resolveSection = (sectionId: string, subcategoryId?: string) => {
+    if (!config) return null;
     const section = config.sections.find(s => s.id === sectionId);
     if (!section) return null;
     
@@ -72,6 +74,10 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
 
   // Debug function (console only)
   const debugConfig = () => {
+    if (!config) {
+      console.log('🔍 Config Debug: Config is null');
+      return;
+    }
     console.log('🔍 Config Debug:', {
       sections: config.sections.length,
       status: config.status,
@@ -119,6 +125,30 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
     console.log('🔍 === End Debug Info ===');
   };
 
+  // Load config on component mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        setIsLoading(true);
+        console.log('🔄 Loading config in NewTechStackAssessment...');
+        const liveConfig = await ConfigService.getLiveConfig();
+        setConfig(liveConfig);
+        console.log('✅ Config loaded successfully in NewTechStackAssessment');
+      } catch (error) {
+        console.error('Failed to load config:', error);
+        toast({
+          title: "Configuration Error",
+          description: "Failed to load configuration. Please refresh the page.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadConfig();
+  }, [toast]);
+
   // Manual refresh function
   const refreshConfig = async () => {
     setIsRefreshing(true);
@@ -126,7 +156,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       // Reinitialize feature flags to ensure latest values
       await featureFlagInitializer.reinitialize();
       
-      const newConfig = ConfigService.getLive();
+      const newConfig = await ConfigService.refreshConfig();
       setConfig(newConfig);
       setLastRefresh(Date.now());
       debugConfig();
@@ -163,14 +193,18 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       }
     };
 
-    const handleConfigUpdate = (event?: CustomEvent) => {
+    const handleConfigUpdate = async (event?: CustomEvent) => {
       console.log('🔄 Config update event received:', event?.detail || 'unknown');
-      const newConfig = ConfigService.getLive();
-      setConfig(newConfig);
-      toast({
-        title: "Configuration updated",
-        description: "New logos and settings loaded",
-      });
+      try {
+        const newConfig = await ConfigService.getLiveConfig();
+        setConfig(newConfig);
+        toast({
+          title: "Configuration updated",
+          description: "New logos and settings loaded",
+        });
+      } catch (error) {
+        console.error('Failed to load config on update:', error);
+      }
     };
 
     const handleForceRefresh = (event?: CustomEvent) => {
@@ -181,12 +215,18 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       }, 200);
     };
 
-    const handleFeatureFlagsReady = () => {
+    const handleFeatureFlagsReady = async () => {
       console.log('🏁 Feature flags ready, refreshing config...');
-      // Refresh config after feature flags are loaded
-      setTimeout(() => {
-        refreshConfig();
-      }, 100);
+      try {
+        setIsLoading(true);
+        const refreshedConfig = await ConfigService.refreshConfig();
+        setConfig(refreshedConfig);
+        console.log('✅ Config refreshed after feature flag change');
+      } catch (error) {
+        console.error('❌ Failed to refresh config after feature flag change:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     const handleFocus = () => {
@@ -206,10 +246,10 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       if (!document.hidden) {
         const currentTimestamp = config.updatedAt;
         const storedConfig = localStorage.getItem('mx_config_live');
-        if (storedConfig) {
+        if (storedConfig && config) {
           try {
             const parsed = JSON.parse(storedConfig);
-            if (parsed.updatedAt !== currentTimestamp) {
+            if (parsed.updatedAt !== config.updatedAt) {
               console.log('🔄 Periodic update detected');
               setConfig(parsed);
               toast({
@@ -232,7 +272,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       window.removeEventListener('focus', handleFocus);
       clearInterval(intervalId);
     };
-  }, [config.updatedAt]);
+  }, [config?.updatedAt]);
   
   // Assessment state
   const [erp, setErp] = useState<IntegrationDetail | null>(null);

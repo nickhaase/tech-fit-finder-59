@@ -9,61 +9,41 @@ const VERSIONS_KEY = 'mx_config_versions';
 // Import new section data
 import { getDataAnalyticsCategories, CONNECTIVITY_EDGE_CATEGORY, RESULT_COPY_TEMPLATES } from '@/data/newSectionCatalogs';
 
-// Convert legacy data to new config format
-const createDefaultConfig = (): AppConfig => {
-  console.log('[createDefaultConfig] Creating default config...');
+export class ConfigService {
+  private static config: AppConfig | null = null;
+  private static isLoading = false;
 
-  const sections = [
-    {
-      id: 'erp',
-      label: 'ERP Systems',
-      description: 'Select your current ERP system',
-      multi: false,
-      systemOptions: ['None', 'Not sure'],
-      options: (ERP_SYSTEMS[0]?.brands || []).map(brand => {
-        
-        return {
-          id: brand.id,
-          name: brand.name,
-          logo: brand.logo,
-          synonyms: brand.commonNames || [],
-          categories: brand.categories,
-          state: 'active' as const
-        };
-      })
-    },
-    {
-      id: 'sensors_monitoring',
-      label: 'Sensors & Monitoring',
-      description: 'Select your sensors and monitoring systems',
-      multi: true,
-      systemOptions: ['None', 'Not sure'],
-      options: [],
-      subcategories: SENSOR_CATEGORIES.map(cat => ({
-        id: cat.id,
-        label: cat.name,
-        description: cat.description,
+  // Convert legacy data to new config format
+  private static async createDefaultConfig(): Promise<AppConfig> {
+    console.log('[createDefaultConfig] Creating default config...');
+
+    const sections = [
+      {
+        id: 'erp',
+        label: 'ERP Systems',
+        description: 'Select your current ERP system',
+        multi: false,
+        systemOptions: ['None', 'Not sure'],
+        options: (ERP_SYSTEMS[0]?.brands || []).map(brand => {
+          
+          return {
+            id: brand.id,
+            name: brand.name,
+            logo: brand.logo,
+            synonyms: brand.commonNames || [],
+            categories: brand.categories,
+            state: 'active' as const
+          };
+        })
+      },
+      {
+        id: 'sensors_monitoring',
+        label: 'Sensors & Monitoring',
+        description: 'Select your sensors and monitoring systems',
         multi: true,
         systemOptions: ['None', 'Not sure'],
-        options: cat.brands.map(brand => ({
-          id: brand.id,
-          name: brand.name,
-          logo: brand.logo,
-          synonyms: brand.commonNames || [],
-          categories: brand.categories,
-          state: 'active' as const
-        }))
-      }))
-    },
-    {
-      id: 'automation_scada',
-      label: 'Automation & SCADA',
-      description: 'Select your automation and SCADA systems',
-      multi: true,
-      systemOptions: ['None', 'Not sure'],
-      options: [],
-      subcategories: [
-        ...AUTOMATION_CATEGORIES.map(cat => ({
+        options: [],
+        subcategories: SENSOR_CATEGORIES.map(cat => ({
           id: cat.id,
           label: cat.name,
           description: cat.description,
@@ -77,15 +57,63 @@ const createDefaultConfig = (): AppConfig => {
             categories: brand.categories,
             state: 'active' as const
           }))
-        })),
-        // Add Connectivity & Edge subcategory
-        {
-          id: CONNECTIVITY_EDGE_CATEGORY.id,
-          label: CONNECTIVITY_EDGE_CATEGORY.name,
-          description: CONNECTIVITY_EDGE_CATEGORY.description,
+        }))
+      },
+      {
+        id: 'automation_scada',
+        label: 'Automation & SCADA',
+        description: 'Select your automation and SCADA systems',
+        multi: true,
+        systemOptions: ['None', 'Not sure'],
+        options: [],
+        subcategories: [
+          ...AUTOMATION_CATEGORIES.map(cat => ({
+            id: cat.id,
+            label: cat.name,
+            description: cat.description,
+            multi: true,
+            systemOptions: ['None', 'Not sure'],
+            options: cat.brands.map(brand => ({
+              id: brand.id,
+              name: brand.name,
+              logo: brand.logo,
+              synonyms: brand.commonNames || [],
+              categories: brand.categories,
+              state: 'active' as const
+            }))
+          })),
+          // Add Connectivity & Edge subcategory
+          {
+            id: CONNECTIVITY_EDGE_CATEGORY.id,
+            label: CONNECTIVITY_EDGE_CATEGORY.name,
+            description: CONNECTIVITY_EDGE_CATEGORY.description,
+            multi: true,
+            systemOptions: ['None', 'Not sure'],
+            options: CONNECTIVITY_EDGE_CATEGORY.brands.map(brand => ({
+              id: brand.id,
+              name: brand.name,
+              logo: brand.logo,
+              synonyms: brand.commonNames || [],
+              categories: brand.categories,
+              state: 'active' as const
+            }))
+          }
+        ]
+      },
+      {
+        id: 'other_systems',
+        label: 'Other Systems',
+        description: 'Select your other systems',
+        multi: true,
+        systemOptions: ['None', 'Not sure'],
+        options: [],
+        subcategories: OTHER_SYSTEM_CATEGORIES.map(cat => ({
+          id: cat.id,
+          label: cat.name,
+          description: cat.description,
           multi: true,
           systemOptions: ['None', 'Not sure'],
-          options: CONNECTIVITY_EDGE_CATEGORY.brands.map(brand => ({
+          options: cat.brands.map(brand => ({
             id: brand.id,
             name: brand.name,
             logo: brand.logo,
@@ -93,101 +121,104 @@ const createDefaultConfig = (): AppConfig => {
             categories: brand.categories,
             state: 'active' as const
           }))
-        }
-      ]
-    },
-    {
-      id: 'other_systems',
-      label: 'Other Systems',
-      description: 'Select your other systems',
-      multi: true,
-      systemOptions: ['None', 'Not sure'],
-      options: [],
-      subcategories: OTHER_SYSTEM_CATEGORIES.map(cat => ({
-        id: cat.id,
-        label: cat.name,
-        description: cat.description,
+        }))
+      },
+      // Add Data & Analytics section
+      {
+        id: 'data_analytics',
+        label: 'Data & Analytics',
+        description: 'Data platforms, historians, and analytics systems',
         multi: true,
         systemOptions: ['None', 'Not sure'],
-        options: cat.brands.map(brand => ({
-          id: brand.id,
-          name: brand.name,
-          logo: brand.logo,
-          synonyms: brand.commonNames || [],
-          categories: brand.categories,
-          state: 'active' as const
-        }))
-      }))
-    },
-    // Add Data & Analytics section
-    {
-      id: 'data_analytics',
-      label: 'Data & Analytics',
-      description: 'Data platforms, historians, and analytics systems',
-      multi: true,
-      systemOptions: ['None', 'Not sure'],
-      options: [],
-      subcategories: (() => {
-        console.log('[createDefaultConfig] Building data analytics subcategories...');
-        const categories = getDataAnalyticsCategories();
-        console.log('[createDefaultConfig] Got', categories.length, 'data analytics categories');
-        return categories.map(cat => ({
-        id: cat.id,
-        label: cat.name,
-        description: cat.description,
-        multi: true,
-        systemOptions: ['None', 'Not sure'],
-        state: ['bi', 'etl', 'governance'].includes(cat.id) ? 'optional' as const : 'active' as const,
-        options: cat.brands.map(brand => ({
-          id: brand.id,
-          name: brand.name,
-          logo: brand.logo,
-          synonyms: brand.commonNames || [],
-          categories: brand.categories,
-          state: 'active' as const
-        }))
-        }));
-      })()
-    }
-  ];
+        options: [],
+        subcategories: (() => {
+          console.log('[createDefaultConfig] Building data analytics subcategories...');
+          const categories = getDataAnalyticsCategories();
+          console.log('[createDefaultConfig] Got', categories.length, 'data analytics categories');
+          return categories.map(cat => ({
+          id: cat.id,
+          label: cat.name,
+          description: cat.description,
+          multi: true,
+          systemOptions: ['None', 'Not sure'],
+          state: ['bi', 'etl', 'governance'].includes(cat.id) ? 'optional' as const : 'active' as const,
+          options: cat.brands.map(brand => ({
+            id: brand.id,
+            name: brand.name,
+            logo: brand.logo,
+            synonyms: brand.commonNames || [],
+            categories: brand.categories,
+            state: 'active' as const
+          }))
+          }));
+        })()
+      }
+    ];
 
-  // Add alias for Platforms/Historians in Sensors section
-  const sensorsSection = sections.find(s => s.id === 'sensors_monitoring');
-  if (sensorsSection && sensorsSection.subcategories) {
-    const historiansAlias = sensorsSection.subcategories.find(sub => sub.id === 'platforms_historians');
-    if (historiansAlias) {
-      // Cast to include aliasOf property
-      (historiansAlias as any).aliasOf = 'data_analytics.historians';
-      historiansAlias.description = 'Data collection and historian platforms (→ Data & Analytics)';
+    // Add alias for Platforms/Historians in Sensors section
+    const sensorsSection = sections.find(s => s.id === 'sensors_monitoring');
+    if (sensorsSection && sensorsSection.subcategories) {
+      const historiansAlias = sensorsSection.subcategories.find(sub => sub.id === 'platforms_historians');
+      if (historiansAlias) {
+        // Cast to include aliasOf property
+        (historiansAlias as any).aliasOf = 'data_analytics.historians';
+        historiansAlias.description = 'Data collection and historian platforms (→ Data & Analytics)';
+      }
+    }
+
+    return {
+      schemaVersion: 2, // Increment for new taxonomy
+      status: 'published',
+      updatedAt: new Date().toISOString(),
+      sections,
+      crossListingEnabled: true,
+      globalBrands: [], // Initialize empty global brands array
+      synonymMap: {
+        'Wonderware': 'AVEVA/Wonderware',
+        'Agora': 'Kojo (Formerly Agora Systems)',
+        'System Platform': 'AVEVA/Wonderware'
+      },
+        resultCopy: {
+          headers: {
+            'data_analytics': 'Data & Analytics Integration',
+            'connectivity_edge': 'Edge Connectivity & Protocols'
+          },
+          perBrand: {
+            defaultTemplate: "MaintainX integrates with {brand} to sync {objects} and enhance {workflow}.",
+            ...RESULT_COPY_TEMPLATES
+          }
+        }
+    };
+  }
+
+  static async getLiveConfig(): Promise<AppConfig> {
+    if (this.config && !this.isLoading) {
+      return this.config;
+    }
+
+    if (this.isLoading) {
+      // Wait for the current loading to complete
+      while (this.isLoading) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      return this.config!;
+    }
+
+    this.isLoading = true;
+    try {
+      console.log('🔄 Loading live config...');
+      // Wait for feature flags to be initialized before generating config
+      const { featureFlagInitializer } = await import('@/services/featureFlagInitializer');
+      await featureFlagInitializer.initialize();
+      
+      this.config = await this.loadConfig();
+      console.log('✅ Live config loaded successfully');
+      return this.config;
+    } finally {
+      this.isLoading = false;
     }
   }
 
-  return {
-    schemaVersion: 2, // Increment for new taxonomy
-    status: 'published',
-    updatedAt: new Date().toISOString(),
-    sections,
-    crossListingEnabled: true,
-    globalBrands: [], // Initialize empty global brands array
-    synonymMap: {
-      'Wonderware': 'AVEVA/Wonderware',
-      'Agora': 'Kojo (Formerly Agora Systems)',
-      'System Platform': 'AVEVA/Wonderware'
-    },
-      resultCopy: {
-        headers: {
-          'data_analytics': 'Data & Analytics Integration',
-          'connectivity_edge': 'Edge Connectivity & Protocols'
-        },
-        perBrand: {
-          defaultTemplate: "MaintainX integrates with {brand} to sync {objects} and enhance {workflow}.",
-          ...RESULT_COPY_TEMPLATES
-        }
-      }
-  };
-};
-
-export class ConfigService {
   static getLive(): AppConfig {
     console.log('🔍 ConfigService.getLive() called');
     
@@ -201,8 +232,8 @@ export class ConfigService {
         // Check if migration is needed
         if (!parsed.schemaVersion || parsed.schemaVersion < 3) {
           console.log('🔄 Running taxonomy migration...');
-          // Non-destructive merge with new default taxonomy to PRESERVE custom edits
-          const def = createDefaultConfig();
+          // For synchronous version, use sync helper
+          const def = this.createDefaultConfigSync();
 
           // Clone parsed to avoid mutation
           const base: AppConfig = { ...parsed };
@@ -283,7 +314,7 @@ export class ConfigService {
       console.log('📂 No stored config found, creating default');
     }
     
-    const defaultConfig = createDefaultConfig();
+    const defaultConfig = this.createDefaultConfigSync();
     console.log('🏭 Created default config:', {
       sectionsCount: defaultConfig.sections.length,
       totalBrands: defaultConfig.sections.reduce((acc, s) => 
@@ -297,6 +328,199 @@ export class ConfigService {
     });
     
     return defaultConfig;
+  }
+
+  // Synchronous version for backwards compatibility
+  private static createDefaultConfigSync(): AppConfig {
+    console.log('[createDefaultConfigSync] Creating default config synchronously...');
+
+    const sections = [
+      {
+        id: 'erp',
+        label: 'ERP Systems',
+        description: 'Select your current ERP system',
+        multi: false,
+        systemOptions: ['None', 'Not sure'],
+        options: (ERP_SYSTEMS[0]?.brands || []).map(brand => ({
+          id: brand.id,
+          name: brand.name,
+          logo: brand.logo,
+          synonyms: brand.commonNames || [],
+          categories: brand.categories,
+          state: 'active' as const
+        }))
+      },
+      {
+        id: 'sensors_monitoring',
+        label: 'Sensors & Monitoring',
+        description: 'Select your sensors and monitoring systems',
+        multi: true,
+        systemOptions: ['None', 'Not sure'],
+        options: [],
+        subcategories: SENSOR_CATEGORIES.map(cat => ({
+          id: cat.id,
+          label: cat.name,
+          description: cat.description,
+          multi: true,
+          systemOptions: ['None', 'Not sure'],
+          options: cat.brands.map(brand => ({
+            id: brand.id,
+            name: brand.name,
+            logo: brand.logo,
+            synonyms: brand.commonNames || [],
+            categories: brand.categories,
+            state: 'active' as const
+          }))
+        }))
+      },
+      {
+        id: 'automation_scada',
+        label: 'Automation & SCADA',
+        description: 'Select your automation and SCADA systems',
+        multi: true,
+        systemOptions: ['None', 'Not sure'],
+        options: [],
+        subcategories: [
+          ...AUTOMATION_CATEGORIES.map(cat => ({
+            id: cat.id,
+            label: cat.name,
+            description: cat.description,
+            multi: true,
+            systemOptions: ['None', 'Not sure'],
+            options: cat.brands.map(brand => ({
+              id: brand.id,
+              name: brand.name,
+              logo: brand.logo,
+              synonyms: brand.commonNames || [],
+              categories: brand.categories,
+              state: 'active' as const
+            }))
+          })),
+          {
+            id: CONNECTIVITY_EDGE_CATEGORY.id,
+            label: CONNECTIVITY_EDGE_CATEGORY.name,
+            description: CONNECTIVITY_EDGE_CATEGORY.description,
+            multi: true,
+            systemOptions: ['None', 'Not sure'],
+            options: CONNECTIVITY_EDGE_CATEGORY.brands.map(brand => ({
+              id: brand.id,
+              name: brand.name,
+              logo: brand.logo,
+              synonyms: brand.commonNames || [],
+              categories: brand.categories,
+              state: 'active' as const
+            }))
+          }
+        ]
+      },
+      {
+        id: 'other_systems',
+        label: 'Other Systems',
+        description: 'Select your other systems',
+        multi: true,
+        systemOptions: ['None', 'Not sure'],
+        options: [],
+        subcategories: OTHER_SYSTEM_CATEGORIES.map(cat => ({
+          id: cat.id,
+          label: cat.name,
+          description: cat.description,
+          multi: true,
+          systemOptions: ['None', 'Not sure'],
+          options: cat.brands.map(brand => ({
+            id: brand.id,
+            name: brand.name,
+            logo: brand.logo,
+            synonyms: brand.commonNames || [],
+            categories: brand.categories,
+            state: 'active' as const
+          }))
+        }))
+      },
+      // Add Data & Analytics section
+      {
+        id: 'data_analytics',
+        label: 'Data & Analytics',
+        description: 'Data platforms, historians, and analytics systems',
+        multi: true,
+        systemOptions: ['None', 'Not sure'],
+        options: [],
+        subcategories: (() => {
+          console.log('[createDefaultConfigSync] Building data analytics subcategories...');
+          const categories = getDataAnalyticsCategories();
+          console.log('[createDefaultConfigSync] Got', categories.length, 'data analytics categories');
+          return categories.map(cat => ({
+          id: cat.id,
+          label: cat.name,
+          description: cat.description,
+          multi: true,
+          systemOptions: ['None', 'Not sure'],
+          state: ['bi', 'etl', 'governance'].includes(cat.id) ? 'optional' as const : 'active' as const,
+          options: cat.brands.map(brand => ({
+            id: brand.id,
+            name: brand.name,
+            logo: brand.logo,
+            synonyms: brand.commonNames || [],
+            categories: brand.categories,
+            state: 'active' as const
+          }))
+          }));
+        })()
+      }
+    ];
+
+    return {
+      schemaVersion: 2,
+      status: 'published',
+      updatedAt: new Date().toISOString(),
+      sections,
+      crossListingEnabled: true,
+      globalBrands: [],
+      synonymMap: {
+        'Wonderware': 'AVEVA/Wonderware',
+        'Agora': 'Kojo (Formerly Agora Systems)',
+        'System Platform': 'AVEVA/Wonderware'
+      },
+      resultCopy: {
+        headers: {
+          'data_analytics': 'Data & Analytics Integration',
+          'connectivity_edge': 'Edge Connectivity & Protocols'
+        },
+        perBrand: {
+          defaultTemplate: "MaintainX integrates with {brand} to sync {objects} and enhance {workflow}.",
+          ...RESULT_COPY_TEMPLATES
+        }
+      }
+    };
+  }
+
+  private static async loadConfig(): Promise<AppConfig> {
+    // For now, just load from storage since we don't have file loading in browser
+    return await this.loadFromStorage();
+  }
+
+  private static async loadFromStorage(): Promise<AppConfig> {
+    const stored = localStorage.getItem(CONFIG_KEY);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (error) {
+        console.error('Failed to parse stored config:', error);
+      }
+    }
+    
+    console.log('📄 No stored config found, creating default config...');
+    return await this.createDefaultConfig();
+  }
+
+  static clearCache(): void {
+    this.config = null;
+    console.log('🗑️ Config cache cleared');
+  }
+
+  static async refreshConfig(): Promise<AppConfig> {
+    console.log('🔄 Refreshing config after feature flag change...');
+    this.clearCache();
+    return await this.getLiveConfig();
   }
 
   static getDraft(): AppConfig | null {
