@@ -7,20 +7,15 @@ const DRAFT_KEY = 'mx_config_draft';
 const VERSIONS_KEY = 'mx_config_versions';
 
 // Import new section data
-import { getDataAnalyticsCategories, CONNECTIVITY_EDGE_CATEGORY, RESULT_COPY_TEMPLATES } from '@/data/newSectionCatalogs';
+import { DATA_ANALYTICS_CATEGORIES, CONNECTIVITY_EDGE_CATEGORY, RESULT_COPY_TEMPLATES } from '@/data/newSectionCatalogs';
 
 export class ConfigService {
   private static config: AppConfig | null = null;
   private static isLoading = false;
 
-  // Convert legacy data to new config format - FULLY ASYNC
-  private static async createDefaultConfig(): Promise<AppConfig> {
+  // Convert legacy data to new config format
+  private static createDefaultConfig(): AppConfig {
     console.log('[createDefaultConfig] Creating default config...');
-    
-    // Ensure feature flags are initialized before creating config
-    const { featureFlagInitializer } = await import('@/services/featureFlagInitializer');
-    await featureFlagInitializer.initialize();
-    console.log('[createDefaultConfig] Feature flags initialized');
 
     const sections = [
       {
@@ -136,11 +131,7 @@ export class ConfigService {
         multi: true,
         systemOptions: ['None', 'Not sure'],
         options: [],
-        subcategories: await (async () => {
-          console.log('[createDefaultConfig] Building data analytics subcategories...');
-          const categories = await this.getDataAnalyticsCategoriesAsync();
-          console.log('[createDefaultConfig] Got', categories.length, 'data analytics categories');
-          return categories.map(cat => ({
+        subcategories: DATA_ANALYTICS_CATEGORIES.map(cat => ({
           id: cat.id,
           label: cat.name,
           description: cat.description,
@@ -155,8 +146,7 @@ export class ConfigService {
             categories: brand.categories,
             state: 'active' as const
           }))
-          }));
-        })()
+        }))
       }
     ];
 
@@ -196,41 +186,22 @@ export class ConfigService {
     };
   }
 
-  static async getLiveConfig(): Promise<AppConfig> {
-    if (this.config && !this.isLoading) {
+  static getLiveConfig(): AppConfig {
+    if (this.config) {
       return this.config;
     }
 
-    if (this.isLoading) {
-      // Wait for the current loading to complete
-      while (this.isLoading) {
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
-      return this.config!;
-    }
-
-    this.isLoading = true;
-    try {
-      console.log('🔄 Loading live config...');
-      // Ensure feature flags are initialized before generating config
-      const { featureFlagInitializer } = await import('@/services/featureFlagInitializer');
-      await featureFlagInitializer.initialize();
-      console.log('🏁 Feature flags ready, loading config...');
-      
-      this.config = await this.loadConfig();
-      console.log('✅ Live config loaded successfully');
-      return this.config;
-    } finally {
-      this.isLoading = false;
-    }
+    console.log('🔄 Loading live config...');
+    this.config = this.getLive();
+    console.log('✅ Live config loaded successfully');
+    return this.config;
   }
 
-  // Clear config cache to force regeneration (called when feature flags change)
+  // Clear config cache to force regeneration
   static invalidateConfig(): void {
     console.log('🗑️ Invalidating config cache...');
     this.config = null;
-    // Also clear localStorage to force fresh generation
-    localStorage.removeItem('appConfig');
+    localStorage.removeItem('mx_config_live');
     // Dispatch event to notify components
     window.dispatchEvent(new CustomEvent('configInvalidated'));
   }
@@ -460,11 +431,7 @@ export class ConfigService {
         multi: true,
         systemOptions: ['None', 'Not sure'],
         options: [],
-        subcategories: (() => {
-          console.log('[createDefaultConfigSync] Building data analytics subcategories...');
-          const categories = getDataAnalyticsCategories();
-          console.log('[createDefaultConfigSync] Got', categories.length, 'data analytics categories');
-          return categories.map(cat => ({
+        subcategories: DATA_ANALYTICS_CATEGORIES.map(cat => ({
           id: cat.id,
           label: cat.name,
           description: cat.description,
@@ -479,8 +446,7 @@ export class ConfigService {
             categories: brand.categories,
             state: 'active' as const
           }))
-          }));
-        })()
+        }))
       }
     ];
 

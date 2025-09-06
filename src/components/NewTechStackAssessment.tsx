@@ -31,7 +31,6 @@ import { BrandPicker } from "@/components/BrandPicker";
 import { FollowUpQuestions } from "@/components/FollowUpQuestions";
 import { AssessmentData, IntegrationDetail, SensorIntegration, AutomationIntegration, OtherSystemIntegration } from "@/types/assessment";
 import { ConfigService } from "@/services/configService";
-import { featureFlagInitializer } from "@/services/featureFlagInitializer";
 import { AppConfig } from "@/types/config";
 import { 
   COMPANY_SIZES,
@@ -127,11 +126,11 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
 
   // Load config on component mount
   useEffect(() => {
-    const loadConfig = async () => {
+    const loadConfig = () => {
       try {
         setIsLoading(true);
         console.log('🔄 Loading config in NewTechStackAssessment...');
-        const liveConfig = await ConfigService.getLiveConfig();
+        const liveConfig = ConfigService.getLive();
         setConfig(liveConfig);
         console.log('✅ Config loaded successfully in NewTechStackAssessment');
       } catch (error) {
@@ -150,13 +149,10 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   }, [toast]);
 
   // Manual refresh function
-  const refreshConfig = async () => {
+  const refreshConfig = () => {
     setIsRefreshing(true);
     try {
-      // Reinitialize feature flags to ensure latest values
-      await featureFlagInitializer.reinitialize();
-      
-      const newConfig = await ConfigService.refreshConfig();
+      const newConfig = ConfigService.getLive();
       setConfig(newConfig);
       setLastRefresh(Date.now());
       debugConfig();
@@ -193,10 +189,10 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       }
     };
 
-    const handleConfigUpdate = async (event?: CustomEvent) => {
+    const handleConfigUpdate = (event?: CustomEvent) => {
       console.log('🔄 Config update event received:', event?.detail || 'unknown');
       try {
-        const newConfig = await ConfigService.getLiveConfig();
+        const newConfig = ConfigService.getLive();
         setConfig(newConfig);
         toast({
           title: "Configuration updated",
@@ -215,36 +211,14 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       }, 200);
     };
 
-    const handleFeatureFlagsReady = async () => {
+    const handleFeatureFlagsReady = () => {
       console.log('🏁 Feature flags ready, refreshing config...');
-      try {
-        setIsLoading(true);
-        const refreshedConfig = await ConfigService.refreshConfig();
-        setConfig(refreshedConfig);
-        console.log('✅ Config refreshed after feature flag change');
-      } catch (error) {
-        console.error('❌ Failed to refresh config after feature flag change:', error);
-      } finally {
-        setIsLoading(false);
-      }
+      refreshConfig();
     };
 
-    const handleConfigInvalidated = async () => {
+    const handleConfigInvalidated = () => {
       console.log('🗑️ Config invalidated, forcing fresh load...');
-      try {
-        setIsLoading(true);
-        const freshConfig = await ConfigService.getLiveConfig();
-        setConfig(freshConfig);
-        console.log('✅ Fresh config loaded after invalidation');
-        toast({
-          title: "Configuration updated",
-          description: "Feature flags changed, configuration refreshed",
-        });
-      } catch (error) {
-        console.error('❌ Failed to load fresh config after invalidation:', error);
-      } finally {
-        setIsLoading(false);
-      }
+      refreshConfig();
     };
 
     const handleFocus = () => {

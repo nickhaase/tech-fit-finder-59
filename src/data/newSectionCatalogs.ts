@@ -1,8 +1,7 @@
 import { CategoryOption } from '@/types/assessment';
-import { getFoundryBrands, getFoundryBrandsAsync } from './foundryBrands';
 
-// Base Data & Analytics Categories (without feature-flagged content)
-const BASE_DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
+// Data & Analytics Categories (including Foundry as permanent)
+export const DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
   {
     id: 'warehouse_lakehouse',
     name: 'Data Warehouse / Lakehouse',
@@ -82,44 +81,27 @@ const BASE_DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
       { id: 'alation', name: 'Alation', commonNames: ['Alation Data Catalog'] },
     ]
   },
+  {
+    id: 'dataops_integration',
+    name: 'DataOps/Integration Platforms',
+    description: 'Advanced data operations and integration platforms for insights-driven workflows',
+    brands: [
+      {
+        id: 'palantir_foundry',
+        name: 'Palantir Foundry',
+        commonNames: ['Foundry', 'Palantir'],
+        logo: '/assets/logos/brands/palantir.svg',
+        categories: ['data_analytics.dataops_integration'],
+        description: 'DataOps platform for operational intelligence and automated decision-making'
+      }
+    ]
+  }
 ];
 
-// Dynamic function to get data analytics categories with feature-flagged content
+// Simple function to get data analytics categories (now static)
 export function getDataAnalyticsCategories(): CategoryOption[] {
-  console.log('[getDataAnalyticsCategories] Building categories dynamically...');
-  const categories = [...BASE_DATA_ANALYTICS_CATEGORIES];
-  
-  // Add Foundry brands conditionally
-  const foundryBrands = getFoundryBrands();
-  if (foundryBrands.length > 0) {
-    console.log('[getDataAnalyticsCategories] Adding Foundry categories:', foundryBrands.length);
-    categories.push(...foundryBrands);
-  } else {
-    console.log('[getDataAnalyticsCategories] No Foundry categories to add');
-  }
-  
-  return categories;
+  return DATA_ANALYTICS_CATEGORIES;
 }
-
-// Async version for proper feature flag loading
-export async function getDataAnalyticsCategoriesAsync(): Promise<CategoryOption[]> {
-  console.log('[getDataAnalyticsCategoriesAsync] Building categories dynamically...');
-  const categories = [...BASE_DATA_ANALYTICS_CATEGORIES];
-  
-  // Add Foundry brands conditionally (async check)
-  const foundryBrands = await getFoundryBrandsAsync();
-  if (foundryBrands.length > 0) {
-    console.log('[getDataAnalyticsCategoriesAsync] Adding Foundry categories:', foundryBrands.length);
-    categories.push(...foundryBrands);
-  } else {
-    console.log('[getDataAnalyticsCategoriesAsync] No Foundry categories to add');
-  }
-  
-  return categories;
-}
-
-// For backward compatibility, export the dynamic function result
-export const DATA_ANALYTICS_CATEGORIES = BASE_DATA_ANALYTICS_CATEGORIES;
 
 // Connectivity & Edge Category
 export const CONNECTIVITY_EDGE_CATEGORY: CategoryOption = {
