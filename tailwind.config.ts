@@ -168,5 +168,16 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	// Add custom CSS utilities
+	plugins: [
+		require("tailwindcss-animate"),
+		function({ addUtilities }: { addUtilities: any }) {
+			addUtilities({
+				// Animation pause state
+				'.animation-paused .animate-data-particle, .animation-paused .animate-pulse-connection, .animation-paused .animate-module-pulse, .animation-paused .animate-pulse-glow': {
+					'animation-play-state': 'paused'
+				}
+			});
+		}
+	],
 } satisfies Config;

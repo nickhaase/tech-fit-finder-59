@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { AssessmentData } from "@/types/assessment";
-import { ArrowRight, Database, Factory, Zap, BarChart3, Settings, FileText, Wifi, Download } from "lucide-react";
+import { ArrowRight, Database, Factory, Zap, BarChart3, Settings, FileText, Wifi, Download, Pause } from "lucide-react";
 import maintainxLogo from "@/assets/logos/maintainx-logo.png";
 import { mapConfigToNodes, Node } from "@/utils/mapConfigToNodes";
 import { Flow } from "@/utils/generateFlows";
@@ -29,6 +29,9 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
   const [activeFlows, setActiveFlows] = useState<Flow[]>([]);
   const [hoveredSystem, setHoveredSystem] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [pausedSystem, setPausedSystem] = useState<string | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Define MaintainX modules with positions
   const maintainXModules: MaintainXModule[] = [
@@ -81,22 +84,55 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
     }
   };
 
+  // Animation control functions
+  const pauseAnimation = (systemId?: string) => {
+    setIsPaused(true);
+    setPausedSystem(systemId || null);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  const resumeAnimation = () => {
+    setIsPaused(false);
+    setPausedSystem(null);
+    startAnimationLoop();
+  };
+
+  const startAnimationLoop = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    intervalRef.current = setInterval(() => {
+      setAnimationIndex(prev => {
+        const newIndex = (prev + 1) % systems.length;
+        setActiveFlows(generateDataFlows(newIndex));
+        return newIndex;
+      });
+    }, 3000);
+  };
+
   useEffect(() => {
     if (systems.length === 0) return;
     
-    const interval = setInterval(() => {
-      const newIndex = (animationIndex + 1) % systems.length;
-      setAnimationIndex(newIndex);
-      setActiveFlows(generateDataFlows(newIndex));
-    }, 3000);
-
     // Initialize with first system
     if (activeFlows.length === 0) {
       setActiveFlows(generateDataFlows(0));
     }
 
-    return () => clearInterval(interval);
-  }, [systems.length, animationIndex]);
+    // Start animation loop if not paused
+    if (!isPaused) {
+      startAnimationLoop();
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [systems.length, isPaused]);
 
   if (systems.length === 0) return null;
 
@@ -105,10 +141,20 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
     activeFlows.some(f => f.id === flowId) ? 1 : 0.2;
 
   return (
-    <div className="relative bg-gradient-to-br from-background via-primary/5 to-accent/10 rounded-lg border border-border/50 overflow-hidden">
+    <div className={`relative bg-gradient-to-br from-background via-primary/5 to-accent/10 rounded-lg border border-border/50 overflow-hidden ${isPaused ? 'animation-paused' : ''}`}>
       <div className="relative text-center p-6 pb-4">
-        <h3 className="text-xl font-semibold mb-2 text-foreground">Live Data Integration with MaintainX</h3>
-        <p className="text-sm text-muted-foreground">Real-time bidirectional data flows between your systems</p>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h3 className="text-xl font-semibold text-foreground">Live Data Integration with MaintainX</h3>
+          {isPaused && (
+            <div className="flex items-center gap-1 px-2 py-1 bg-warning/20 text-warning rounded-full">
+              <Pause className="w-3 h-3" />
+              <span className="text-xs font-medium">PAUSED</span>
+            </div>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {isPaused ? 'Animation paused - hover away to resume' : 'Real-time bidirectional data flows between your systems'}
+        </p>
         
         {/* Export Button */}
         <Button
@@ -136,9 +182,27 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                     index === animationIndex 
                       ? "bg-primary/10 border-primary shadow-card animate-pulse-glow" 
                       : "bg-card border-border/50 hover:border-primary/30"
-                  }`}
-                  onMouseEnter={() => setHoveredSystem(system.name)}
-                  onMouseLeave={() => setHoveredSystem(null)}
+                  } ${isPaused && pausedSystem === system.id ? 'ring-2 ring-warning' : ''}`}
+                  onMouseEnter={() => {
+                    setHoveredSystem(system.name);
+                    pauseAnimation(system.id);
+                  }}
+                  onMouseLeave={() => {
+                    setHoveredSystem(null);
+                    if (pausedSystem === system.id) {
+                      resumeAnimation();
+                    }
+                  }}
+                  onClick={() => {
+                    // Mobile click to pause/resume
+                    if (isPaused && pausedSystem === system.id) {
+                      resumeAnimation();
+                    } else {
+                      pauseAnimation(system.id);
+                      setAnimationIndex(index);
+                      setActiveFlows(generateDataFlows(index));
+                    }
+                  }}
                 >
                   {/* System logo or initials */}
                   <div className="w-10 h-10 rounded-lg bg-card border border-border/50 flex items-center justify-center relative overflow-hidden flex-shrink-0">
@@ -330,11 +394,25 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                     return (
                       <div
                         key={module.id}
-                        className={`p-3 rounded-lg border border-white/20 backdrop-blur transition-all relative ${
+                        className={`p-3 rounded-lg border border-white/20 backdrop-blur transition-all relative cursor-pointer ${
                           isActive 
                             ? 'bg-white/20 shadow-lg animate-module-pulse' 
                             : 'bg-white/10 hover:bg-white/15'
-                        }`}
+                        } ${isPaused && pausedSystem === module.id ? 'ring-2 ring-warning' : ''}`}
+                        onMouseEnter={() => pauseAnimation(module.id)}
+                        onMouseLeave={() => {
+                          if (pausedSystem === module.id) {
+                            resumeAnimation();
+                          }
+                        }}
+                        onClick={() => {
+                          // Mobile click to pause/resume
+                          if (isPaused && pausedSystem === module.id) {
+                            resumeAnimation();
+                          } else {
+                            pauseAnimation(module.id);
+                          }
+                        }}
                       >
                         <div className="flex items-center gap-2">
                           <Icon className="w-4 h-4 flex-shrink-0" />
