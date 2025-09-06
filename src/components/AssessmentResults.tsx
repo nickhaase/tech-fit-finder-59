@@ -177,7 +177,7 @@ export const AssessmentResults = ({ data, onRestart }: AssessmentResultsProps) =
         {/* Your Tech Stack Summary */}
         <Card className="p-8 mb-8 bg-gradient-card shadow-card border-0 animate-fade-in">
           <h2 className="text-2xl font-bold mb-6">Your Technology Ecosystem</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
             {data.integrations.erp && (
               <div className="animate-slide-in">
                 <h3 className="font-semibold mb-3 text-primary">ERP Systems</h3>
@@ -222,8 +222,25 @@ export const AssessmentResults = ({ data, onRestart }: AssessmentResultsProps) =
                 </div>
               </div>
             )}
-            {data.integrations.otherSystems.length > 0 && (
+            {data.integrations.dataAnalytics && data.integrations.dataAnalytics.length > 0 && (
               <div className="animate-slide-in" style={{ animationDelay: '0.3s' }}>
+                <h3 className="font-semibold mb-3 text-primary">Data & Analytics</h3>
+                <div className="space-y-2">
+                  {data.integrations.dataAnalytics.map((analytics, idx) => (
+                    <Badge 
+                      key={idx} 
+                      variant="secondary" 
+                      className="block w-fit animate-scale-in"
+                      style={{ animationDelay: `${0.3 + idx * 0.05}s` }}
+                    >
+                      {analytics.brand}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {data.integrations.otherSystems.length > 0 && (
+              <div className="animate-slide-in" style={{ animationDelay: '0.4s' }}>
                 <h3 className="font-semibold mb-3 text-primary">Other Systems</h3>
                 <div className="space-y-2">
                   {data.integrations.otherSystems.map((other, idx) => (
@@ -231,7 +248,7 @@ export const AssessmentResults = ({ data, onRestart }: AssessmentResultsProps) =
                       key={idx} 
                       variant="secondary" 
                       className="block w-fit animate-scale-in"
-                      style={{ animationDelay: `${0.3 + idx * 0.05}s` }}
+                      style={{ animationDelay: `${0.4 + idx * 0.05}s` }}
                     >
                       {other.brand}
                     </Badge>

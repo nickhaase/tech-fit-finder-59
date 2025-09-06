@@ -234,6 +234,60 @@ export const generateAssessmentReport = async (data: AssessmentData, appConfig?:
     }
   }
   
+  // Data & Analytics
+  if (data.integrations.dataAnalytics && data.integrations.dataAnalytics.length > 0) {
+    const activeDataAnalytics = data.integrations.dataAnalytics.filter(
+      analytics => analytics.brand !== 'None' && analytics.brand !== 'Not sure'
+    );
+    
+    if (activeDataAnalytics.length > 0) {
+      checkPageSpace(60 + (activeDataAnalytics.length * 20));
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.setTextColor(139, 69, 255); // Purple
+      pdf.text('Data & Analytics Systems', 60, yPosition);
+      yPosition += 25;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(12);
+      pdf.setTextColor(55, 65, 81);
+      
+      activeDataAnalytics.forEach(analytics => {
+        pdf.text(`• ${analytics.brand} (${analytics.type})`, 80, yPosition);
+        yPosition += 18;
+      });
+      yPosition += 20;
+    }
+  }
+
+  // Other Systems
+  if (data.integrations.otherSystems.length > 0) {
+    const activeOther = data.integrations.otherSystems.filter(
+      other => other.brand !== 'None' && other.brand !== 'Not sure'
+    );
+    
+    if (activeOther.length > 0) {
+      checkPageSpace(60 + (activeOther.length * 20));
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.setTextColor(255, 169, 69); // Safety Orange
+      pdf.text('Other Systems', 60, yPosition);
+      yPosition += 25;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(12);
+      pdf.setTextColor(55, 65, 81);
+      
+      activeOther.forEach(other => {
+        pdf.text(`• ${other.brand} (${other.type})`, 80, yPosition);
+        yPosition += 18;
+      });
+      yPosition += 20;
+    }
+  }
+  
   // === NEW PAGE: RECOMMENDATIONS ===
   pdf.addPage();
   yPosition = 60;

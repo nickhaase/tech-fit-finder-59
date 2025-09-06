@@ -41,6 +41,13 @@ export const ArchitectureVisualization = ({ data }: ArchitectureVisualizationPro
       description: "Process control and automation systems"
     },
     {
+      title: "Data & Analytics",
+      icon: BarChart3,
+      items: data.integrations.dataAnalytics ? data.integrations.dataAnalytics.map(d => d.brand) : [],
+      color: "bg-cyan-500",
+      description: "Analytics platforms and data intelligence"
+    },
+    {
       title: "Other Systems",
       icon: Factory,
       items: data.integrations.otherSystems.map(o => o.brand),
