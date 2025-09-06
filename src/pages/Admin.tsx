@@ -403,7 +403,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="features">
-            <FeatureFlagManager />
+            <FeatureFlagManager userEmail={currentUser?.email} />
           </TabsContent>
 
           <TabsContent value="copy">

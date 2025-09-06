@@ -1,6 +1,7 @@
 import { featureFlagService } from "@/services/featureFlagService";
 
 // Feature flags for gating new functionality
+// Now dynamically loaded from database
 export const features = {
   // Foundry Feature: Gate all Palantir Foundry related functionality
   FOUNDRY: false as boolean, // Default: disabled for safety
@@ -12,19 +13,23 @@ export const features = {
 
 export type FeatureFlags = typeof features;
 
-// Helper function to check if a feature is enabled (now with database support)
+// Helper function to check if a feature is enabled (async for database lookup)
 export async function isFeatureEnabled(feature: keyof FeatureFlags): Promise<boolean> {
   try {
-    // Try database first, fall back to static config
-    const dbEnabled = await featureFlagService.isFeatureEnabled(feature);
-    return dbEnabled;
+    // For database-backed features, query the service
+    if (feature === 'FOUNDRY') {
+      return await featureFlagService.getFlag(feature);
+    }
+    
+    // Fallback to static config for other features
+    return features[feature] === true;
   } catch (error) {
-    console.warn('[features]', `Error checking feature ${feature}, falling back to static:`, error);
-    return features[feature] === true; // Fallback to static config
+    console.warn('[features]', `Error checking feature ${feature}:`, error);
+    return false; // Fail-closed
   }
 }
 
-// Synchronous version for backwards compatibility (uses static config only)
+// Synchronous version for backwards compatibility (uses cache)
 export function isFeatureEnabledSync(feature: keyof FeatureFlags): boolean {
   try {
     return features[feature] === true;
@@ -41,7 +46,7 @@ export function withFeature<T>(
   fallback?: T
 ): T | undefined {
   try {
-    if (isFeatureEnabled(feature)) {
+    if (isFeatureEnabledSync(feature)) {
       return callback();
     }
     return fallback;

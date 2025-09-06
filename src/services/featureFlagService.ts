@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { FeatureFlags } from "@/config/features";
 
 export interface FeatureFlag {
   id: string;
@@ -12,31 +11,27 @@ export interface FeatureFlag {
 }
 
 class FeatureFlagService {
-  private cache = new Map<string, boolean>();
-  private cacheTimestamp = 0;
-  private readonly CACHE_TTL = 30000; // 30 seconds
+  private cache: Map<string, boolean> = new Map();
+  private cacheExpiry: number = 0;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  // Get all feature flags from database
-  async getFeatureFlags(): Promise<FeatureFlag[]> {
+  async getAllFlags(): Promise<FeatureFlag[]> {
     const { data, error } = await supabase
       .from('feature_flags')
       .select('*')
       .order('flag_name');
 
     if (error) {
-      console.error('[FeatureFlagService] Error fetching feature flags:', error);
+      console.error('Error fetching feature flags:', error);
       return [];
     }
 
     return data || [];
   }
 
-  // Get cached flag value with fallback
-  async isFeatureEnabled(flagName: keyof FeatureFlags): Promise<boolean> {
-    const now = Date.now();
-    
+  async getFlag(flagName: string): Promise<boolean> {
     // Check cache first
-    if (this.cache.has(flagName) && (now - this.cacheTimestamp) < this.CACHE_TTL) {
+    if (this.isCacheValid() && this.cache.has(flagName)) {
       return this.cache.get(flagName) || false;
     }
 
@@ -48,19 +43,18 @@ class FeatureFlagService {
       .single();
 
     if (error) {
-      console.warn(`[FeatureFlagService] Error checking feature ${flagName}:`, error);
-      return false; // Fail-closed
+      console.warn(`Feature flag ${flagName} not found, defaulting to false`);
+      return false;
     }
 
-    const enabled = data?.enabled || false;
-    this.cache.set(flagName, enabled);
-    this.cacheTimestamp = now;
-    
-    return enabled;
+    // Update cache
+    this.cache.set(flagName, data.enabled);
+    this.refreshCacheExpiry();
+
+    return data.enabled;
   }
 
-  // Update feature flag
-  async updateFeatureFlag(flagName: string, enabled: boolean, updatedBy?: string): Promise<void> {
+  async updateFlag(flagName: string, enabled: boolean, updatedBy?: string): Promise<boolean> {
     const { error } = await supabase
       .from('feature_flags')
       .update({ 
@@ -71,39 +65,50 @@ class FeatureFlagService {
       .eq('flag_name', flagName);
 
     if (error) {
-      console.error('[FeatureFlagService] Error updating feature flag:', error);
-      throw error;
+      console.error('Error updating feature flag:', error);
+      return false;
     }
 
-    // Invalidate cache
-    this.cache.delete(flagName);
-    this.cacheTimestamp = 0;
+    // Update cache
+    this.cache.set(flagName, enabled);
+    this.refreshCacheExpiry();
+
+    return true;
   }
 
-  // Create new feature flag
-  async createFeatureFlag(flagName: string, enabled: boolean, description?: string): Promise<void> {
+  async createFlag(flagName: string, enabled: boolean, description?: string, createdBy?: string): Promise<boolean> {
     const { error } = await supabase
       .from('feature_flags')
       .insert({
         flag_name: flagName,
         enabled,
-        description
+        description,
+        updated_by: createdBy
       });
 
     if (error) {
-      console.error('[FeatureFlagService] Error creating feature flag:', error);
-      throw error;
+      console.error('Error creating feature flag:', error);
+      return false;
     }
 
-    // Invalidate cache
-    this.cache.clear();
-    this.cacheTimestamp = 0;
+    // Update cache
+    this.cache.set(flagName, enabled);
+    this.refreshCacheExpiry();
+
+    return true;
   }
 
-  // Clear cache (useful for real-time updates)
+  private isCacheValid(): boolean {
+    return Date.now() < this.cacheExpiry;
+  }
+
+  private refreshCacheExpiry(): void {
+    this.cacheExpiry = Date.now() + this.CACHE_DURATION;
+  }
+
   clearCache(): void {
     this.cache.clear();
-    this.cacheTimestamp = 0;
+    this.cacheExpiry = 0;
   }
 }
 
