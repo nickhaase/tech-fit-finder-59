@@ -7,10 +7,11 @@ const DRAFT_KEY = 'mx_config_draft';
 const VERSIONS_KEY = 'mx_config_versions';
 
 // Import new section data
-import { DATA_ANALYTICS_CATEGORIES, CONNECTIVITY_EDGE_CATEGORY, RESULT_COPY_TEMPLATES } from '@/data/newSectionCatalogs';
+import { getDataAnalyticsCategories, CONNECTIVITY_EDGE_CATEGORY, RESULT_COPY_TEMPLATES } from '@/data/newSectionCatalogs';
 
 // Convert legacy data to new config format
 const createDefaultConfig = (): AppConfig => {
+  console.log('[createDefaultConfig] Creating default config...');
 
   const sections = [
     {
@@ -126,7 +127,11 @@ const createDefaultConfig = (): AppConfig => {
       multi: true,
       systemOptions: ['None', 'Not sure'],
       options: [],
-      subcategories: DATA_ANALYTICS_CATEGORIES.map(cat => ({
+      subcategories: (() => {
+        console.log('[createDefaultConfig] Building data analytics subcategories...');
+        const categories = getDataAnalyticsCategories();
+        console.log('[createDefaultConfig] Got', categories.length, 'data analytics categories');
+        return categories.map(cat => ({
         id: cat.id,
         label: cat.name,
         description: cat.description,
@@ -141,7 +146,8 @@ const createDefaultConfig = (): AppConfig => {
           categories: brand.categories,
           state: 'active' as const
         }))
-      }))
+        }));
+      })()
     }
   ];
 

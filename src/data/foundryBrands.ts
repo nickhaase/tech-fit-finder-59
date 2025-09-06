@@ -3,9 +3,15 @@ import { isFeatureEnabledSync } from '../config/features';
 
 // Palantir Foundry brand definition (gated by feature flag)
 export function getFoundryBrands(): CategoryOption[] {
-  if (!isFeatureEnabledSync('FOUNDRY')) {
+  const foundryEnabled = isFeatureEnabledSync('FOUNDRY');
+  console.log('[getFoundryBrands] FOUNDRY feature flag check:', foundryEnabled);
+  
+  if (!foundryEnabled) {
+    console.log('[getFoundryBrands] FOUNDRY disabled, returning empty array');
     return [];
   }
+
+  console.log('[getFoundryBrands] FOUNDRY enabled, returning Palantir Foundry brands');
 
   return [
     {
@@ -53,9 +59,15 @@ export function getEnhancedBrands(): Record<string, string[]> {
 
 // Synonym mappings for Foundry (gated by feature flag)
 export function getFoundrySynonyms(): Record<string, string> {
-  if (!isFeatureEnabledSync('FOUNDRY')) {
+  const foundryEnabled = isFeatureEnabledSync('FOUNDRY');
+  console.log('[getFoundrySynonyms] FOUNDRY feature flag check:', foundryEnabled);
+  
+  if (!foundryEnabled) {
+    console.log('[getFoundrySynonyms] FOUNDRY disabled, returning empty synonyms');
     return {};
   }
+
+  console.log('[getFoundrySynonyms] FOUNDRY enabled, returning Foundry synonyms');
   
   return {
     'foundry': 'palantir_foundry',

@@ -106,6 +106,14 @@ class FeatureFlagService {
     this.cacheExpiry = Date.now() + this.CACHE_DURATION;
   }
 
+  // Add synchronous cache access for sync feature checking
+  getCachedFlag(flagName: string): boolean | null {
+    if (this.isCacheValid() && this.cache.has(flagName)) {
+      return this.cache.get(flagName) || false;
+    }
+    return null; // Not cached or cache expired
+  }
+
   clearCache(): void {
     this.cache.clear();
     this.cacheExpiry = 0;

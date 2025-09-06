@@ -181,6 +181,14 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       }, 200);
     };
 
+    const handleFeatureFlagsReady = () => {
+      console.log('🏁 Feature flags ready, refreshing config...');
+      // Refresh config after feature flags are loaded
+      setTimeout(() => {
+        refreshConfig();
+      }, 100);
+    };
+
     const handleFocus = () => {
       console.log('👁️ Window focus detected, checking for config updates');
       refreshConfig();
@@ -190,6 +198,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('configUpdated', handleConfigUpdate as EventListener);
     window.addEventListener('forceConfigRefresh', handleForceRefresh as EventListener);
+    window.addEventListener('featureFlagsReady', handleFeatureFlagsReady);
     window.addEventListener('focus', handleFocus);
 
     // Check for updates every 5 seconds when page is visible
@@ -219,6 +228,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('configUpdated', handleConfigUpdate as EventListener);
       window.removeEventListener('forceConfigRefresh', handleForceRefresh as EventListener);
+      window.removeEventListener('featureFlagsReady', handleFeatureFlagsReady);
       window.removeEventListener('focus', handleFocus);
       clearInterval(intervalId);
     };

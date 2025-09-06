@@ -34,8 +34,9 @@ export function isFeatureEnabledSync(feature: keyof FeatureFlags): boolean {
   try {
     // For database-backed features, check the service cache first
     if (feature === 'FOUNDRY') {
-      // Try to get from cache - this will return false if not cached yet
-      const cached = featureFlagService['cache'].get(feature);
+      // Use the public getCachedFlag method instead of private cache access
+      const cached = featureFlagService.getCachedFlag(feature);
+      console.log(`[features] FOUNDRY flag cache check: ${cached}`);
       return cached === true;
     }
     

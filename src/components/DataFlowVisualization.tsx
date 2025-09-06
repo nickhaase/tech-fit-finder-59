@@ -67,7 +67,6 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
       if (!system) return [];
       
       // Use sync version for immediate rendering - async version would require state management
-      const { generateEnhancedFlowsSync } = require('../utils/enhancedFlowGeneration');
       const allFlows = generateEnhancedFlowsSync(systems);
       const systemFlows = allFlows.filter(flow => 
         flow.from === system.id || flow.to === system.id ||

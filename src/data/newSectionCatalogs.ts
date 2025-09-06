@@ -1,8 +1,8 @@
 import { CategoryOption } from '@/types/assessment';
 import { getFoundryBrands } from './foundryBrands';
 
-// Data & Analytics Categories
-export const DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
+// Base Data & Analytics Categories (without feature-flagged content)
+const BASE_DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
   {
     id: 'warehouse_lakehouse',
     name: 'Data Warehouse / Lakehouse',
@@ -82,9 +82,27 @@ export const DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
       { id: 'alation', name: 'Alation', commonNames: ['Alation Data Catalog'] },
     ]
   },
-  // Add Foundry brands conditionally
-  ...getFoundryBrands(),
 ];
+
+// Dynamic function to get data analytics categories with feature-flagged content
+export function getDataAnalyticsCategories(): CategoryOption[] {
+  console.log('[getDataAnalyticsCategories] Building categories dynamically...');
+  const categories = [...BASE_DATA_ANALYTICS_CATEGORIES];
+  
+  // Add Foundry brands conditionally
+  const foundryBrands = getFoundryBrands();
+  if (foundryBrands.length > 0) {
+    console.log('[getDataAnalyticsCategories] Adding Foundry categories:', foundryBrands.length);
+    categories.push(...foundryBrands);
+  } else {
+    console.log('[getDataAnalyticsCategories] No Foundry categories to add');
+  }
+  
+  return categories;
+}
+
+// For backward compatibility, export the dynamic function result
+export const DATA_ANALYTICS_CATEGORIES = BASE_DATA_ANALYTICS_CATEGORIES;
 
 // Connectivity & Edge Category
 export const CONNECTIVITY_EDGE_CATEGORY: CategoryOption = {
