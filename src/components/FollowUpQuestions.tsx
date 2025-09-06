@@ -12,7 +12,7 @@ import { PROTOCOLS } from "@/data/brandCatalogs";
 
 interface FollowUpQuestionsProps {
   brandName: string;
-  category: 'erp' | 'sensors' | 'automation' | 'other';
+  category: 'erp' | 'sensors' | 'automation' | 'other' | 'data_analytics';
   subcategory?: string;
   currentDetails?: Partial<IntegrationDetail>;
   onComplete: (details: IntegrationDetail) => void;

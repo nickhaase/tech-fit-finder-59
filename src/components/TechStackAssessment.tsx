@@ -238,6 +238,7 @@ export const TechStackAssessment = ({ onComplete }: TechStackAssessmentProps) =>
           brand: automation,
           type: 'SCADA' as const
         })),
+        dataAnalytics: [],
         otherSystems: selectedTech.other.map(other => ({
           brand: other,
           type: 'Legacy CMMS/EAM' as const

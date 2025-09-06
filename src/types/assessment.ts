@@ -29,6 +29,10 @@ export interface OtherSystemIntegration extends IntegrationDetail {
   type: 'Legacy CMMS/EAM' | 'Asset Tracking' | 'Inventory/Warehouse' | 'Workflow/ITSM/iPaaS';
 }
 
+export interface DataAnalyticsIntegration extends IntegrationDetail {
+  type: 'Data Warehouse / Lakehouse' | 'Historians / Time-Series' | 'Streaming & Eventing' | 'BI / Visualization' | 'ETL/ELT & Data Integration' | 'Data Governance / Catalog' | 'DataOps/Integration Platforms';
+}
+
 export interface ITOTConstraints {
   network?: 'air-gapped' | 'outbound-only' | 'vpn' | 'open';
   dataResidency?: string;
@@ -49,6 +53,7 @@ export interface AssessmentData {
     sensorsMonitoring: SensorIntegration[];
     automationScada: AutomationIntegration[];
     otherSystems: OtherSystemIntegration[];
+    dataAnalytics: DataAnalyticsIntegration[];
   };
   integrationPatterns: {
     from: string;

@@ -10,11 +10,12 @@ export const createTestAssessment = async (): Promise<{ success: boolean; url?: 
         industry: 'manufacturing'
       },
       goals: ['Improve efficiency'],
-      integrations: {
-        sensorsMonitoring: [],
-        automationScada: [],
-        otherSystems: []
-      },
+    integrations: {
+      sensorsMonitoring: [],
+      automationScada: [],
+      otherSystems: [],
+      dataAnalytics: []
+    },
       integrationPatterns: [],
       scorecard: {
         compatibilityPercent: 85,

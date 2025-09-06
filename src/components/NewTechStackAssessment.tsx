@@ -29,7 +29,7 @@ import {
 
 import { BrandPicker } from "@/components/BrandPicker";
 import { FollowUpQuestions } from "@/components/FollowUpQuestions";
-import { AssessmentData, IntegrationDetail, SensorIntegration, AutomationIntegration, OtherSystemIntegration } from "@/types/assessment";
+import { AssessmentData, IntegrationDetail, SensorIntegration, AutomationIntegration, OtherSystemIntegration, DataAnalyticsIntegration } from "@/types/assessment";
 import { ConfigService } from "@/services/configService";
 import { AppConfig } from "@/types/config";
 import { 
@@ -273,6 +273,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   const [sensorsMonitoring, setSensorsMonitoring] = useState<SensorIntegration[]>([]);
   const [automationScada, setAutomationScada] = useState<AutomationIntegration[]>([]);
   const [otherSystems, setOtherSystems] = useState<OtherSystemIntegration[]>([]);
+  const [dataAnalytics, setDataAnalytics] = useState<DataAnalyticsIntegration[]>([]);
   const [companySize, setCompanySize] = useState('');
   const [industry, setIndustry] = useState('');
   const [goals, setGoals] = useState<string[]>([]);
@@ -286,17 +287,17 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   // Modal state
   const [showBrandPicker, setShowBrandPicker] = useState<{
     category: any;
-    type: 'erp' | 'sensors' | 'automation' | 'other';
+    type: 'erp' | 'sensors' | 'automation' | 'other' | 'data_analytics';
     subcategory?: string;
   } | null>(null);
   const [showFollowUp, setShowFollowUp] = useState<{
     brandName: string;
-    category: 'erp' | 'sensors' | 'automation' | 'other';
+    category: 'erp' | 'sensors' | 'automation' | 'other' | 'data_analytics';
     subcategory?: string;
     currentDetails?: Partial<IntegrationDetail>;
   } | null>(null);
 
-  const totalSteps = mode === 'quick' ? 7 : 9;
+  const totalSteps = mode === 'quick' ? 8 : 10;
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   const canProceed = () => {
@@ -306,10 +307,11 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       case 2: return sensorsMonitoring.length > 0 || hasNoneOrNotSure(sensorsMonitoring) || skippedSections.has('sensors');
       case 3: return automationScada.length > 0 || hasNoneOrNotSure(automationScada) || skippedSections.has('automation');
       case 4: return otherSystems.length > 0 || hasNoneOrNotSure(otherSystems) || skippedSections.has('other');
-      case 5: return companySize !== '';
-      case 6: return industry !== '';
-      case 7: return goals.length > 0;
-      case 8: return mode === 'quick' || kpis.length > 0;
+      case 5: return dataAnalytics.length > 0 || hasNoneOrNotSure(dataAnalytics) || skippedSections.has('data_analytics');
+      case 6: return companySize !== '';
+      case 7: return industry !== '';
+      case 8: return goals.length > 0;
+      case 9: return mode === 'quick' || kpis.length > 0;
       default: return false;
     }
   };
@@ -334,6 +336,9 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
         break;
       case 'other':
         setOtherSystems([]);
+        break;
+      case 'data_analytics':
+        setDataAnalytics([]);
         break;
     }
   };
@@ -361,7 +366,8 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
         erp: erp || undefined,
         sensorsMonitoring,
         automationScada,
-        otherSystems
+        otherSystems,
+        dataAnalytics
       },
       integrationPatterns: generateIntegrationPatterns(),
       scorecard: calculateScorecard()
@@ -413,7 +419,8 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       (erp ? 1 : 0) + 
       sensorsMonitoring.filter(s => s.brand !== 'None' && s.brand !== 'Not sure').length +
       automationScada.filter(a => a.brand !== 'None' && a.brand !== 'Not sure').length +
-      otherSystems.filter(o => o.brand !== 'None' && o.brand !== 'Not sure').length;
+      otherSystems.filter(o => o.brand !== 'None' && o.brand !== 'Not sure').length +
+      dataAnalytics.filter(d => d.brand !== 'None' && d.brand !== 'Not sure').length;
 
     return {
       compatibilityPercent: totalIntegrations > 0 ? 95 : 0,
@@ -423,7 +430,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
     } as const;
   };
 
-  const handleBrandSelection = (category: any, type: 'erp' | 'sensors' | 'automation' | 'other', subcategory?: string) => {
+  const handleBrandSelection = (category: any, type: 'erp' | 'sensors' | 'automation' | 'other' | 'data_analytics', subcategory?: string) => {
     setShowBrandPicker({ category, type, subcategory });
   };
 
@@ -488,6 +495,22 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       if (brandId !== 'none' && brandId !== 'not_sure' && mode === 'advanced') {
         setShowFollowUp({ brandName, category: type, subcategory });
       }
+    } else if (type === 'data_analytics') {
+      const newDataAnalytics: DataAnalyticsIntegration = {
+        brand: brandName,
+        type: subcategory as any
+      };
+      setDataAnalytics(prev => {
+        const existing = prev.find(d => d.brand === brandName && d.type === subcategory);
+        if (existing) {
+          return prev.filter(d => !(d.brand === brandName && d.type === subcategory));
+        }
+        return [...prev, newDataAnalytics];
+      });
+
+      if (brandId !== 'none' && brandId !== 'not_sure' && mode === 'advanced') {
+        setShowFollowUp({ brandName, category: type, subcategory });
+      }
     }
   };
 
@@ -518,6 +541,14 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
           o.brand === brandName && o.type === subcategory 
             ? { ...o, ...details } 
             : o
+        )
+      );
+    } else if (category === 'data_analytics') {
+      setDataAnalytics(prev => 
+        prev.map(d => 
+          d.brand === brandName && d.type === subcategory 
+            ? { ...d, ...details } 
+            : d
         )
       );
     }
@@ -905,6 +936,83 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
           <div className="space-y-6">
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-primary rounded-full mb-4">
+                <Database className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <h3 className="text-2xl font-bold mb-2">Data & Analytics</h3>
+              <p className="text-muted-foreground">Data platforms and analytics tools in your organization</p>
+            </div>
+            
+            {skippedSections.has('data_analytics') ? (
+              <Card className="p-6 border-dashed bg-muted/30 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <X className="w-5 h-5 text-muted-foreground" />
+                    <h4 className="font-semibold text-muted-foreground">Data & Analytics Section Skipped</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    You've indicated this section is not applicable to your operations
+                  </p>
+                  <Badge variant="outline">N/A</Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUnskipSection('data_analytics')}
+                  >
+                    Undo Skip
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  {config.sections.find(s => s.id === 'data_analytics')?.subcategories?.map((category) => (
+                    <Card
+                      key={category.id}
+                      className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft"
+                      onClick={() => handleBrandSelection(category, 'data_analytics', category.label)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold mb-1">{category.label}</h4>
+                          <p className="text-sm text-muted-foreground">{category.description}</p>
+                          {dataAnalytics.filter(d => d.type === category.label).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {dataAnalytics
+                                .filter(d => d.type === category.label)
+                                .slice(0, 3)
+                                .map((data, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {data.brand}
+                                  </Badge>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                
+                <Card
+                  className="p-4 cursor-pointer transition-all duration-200 hover:shadow-soft border-dashed border-muted-foreground/30 bg-muted/10"
+                  onClick={() => handleSkipSection('data_analytics')}
+                >
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <X className="w-4 h-4" />
+                    <span className="text-sm font-medium">Skip - We don't use data & analytics platforms</span>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </div>
+        );
+
+      case 6:
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-primary rounded-full mb-4">
                 <Building className="w-8 h-8 text-primary-foreground" />
               </div>
               <h3 className="text-2xl font-bold mb-2">Company Size</h3>
@@ -934,7 +1042,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
           </div>
         );
 
-      case 6:
+      case 7:
         return (
           <div className="space-y-6">
             <div className="text-center">
@@ -968,7 +1076,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
           </div>
         );
 
-      case 7:
+      case 8:
         return (
           <div className="space-y-6">
             <div className="text-center">
@@ -1003,6 +1111,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
         );
 
       case 8:
+      case 9:
         return mode === 'advanced' ? (
           <div className="space-y-6">
             <div className="text-center">
@@ -1092,6 +1201,7 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
       "Sensors & Monitoring",
       "Automation & SCADA",
       "Other Systems",
+      "Data & Analytics",
       "Company Size",
       "Industry",
       "Goals & Objectives"
