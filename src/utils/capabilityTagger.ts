@@ -1,5 +1,4 @@
 import { Node } from './mapConfigToNodes';
-import { isFeatureEnabledSync } from '../config/features';
 
 /**
  * System capabilities that can trigger automated integration flows
@@ -223,19 +222,7 @@ export function tagNodeWithCapabilities(node: Node): Node {
       }
     }
     
-    // Feature flag gating for Foundry-specific capabilities
-    if (enhanced.capabilities.length > 0) {
-      const foundryCapabilities = ['insight_to_work', 'asset_health', 'parts_intel', 'fan_in', 'model_sync'];
-      const hasFoundryCapabilities = enhanced.capabilities.some(cap => foundryCapabilities.includes(cap));
-      
-      if (hasFoundryCapabilities && (nodeId.includes('foundry') || nodeName.includes('foundry'))) {
-        // Foundry-specific capabilities are gated by feature flag
-        if (!isFeatureEnabledSync('FOUNDRY')) {
-          enhanced.capabilities = enhanced.capabilities.filter(cap => !foundryCapabilities.includes(cap)) as SystemCapability[];
-          console.log(`[capabilities] FOUNDRY feature disabled, filtered capabilities for ${node.name}`);
-        }
-      }
-    }
+    // All capabilities are always enabled now
     
     return enhanced;
     

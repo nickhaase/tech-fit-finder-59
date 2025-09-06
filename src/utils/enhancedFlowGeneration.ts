@@ -1,6 +1,5 @@
 import { Node } from './mapConfigToNodes';
 import { Flow, generateFlowsForNode } from './generateFlows';
-import { isFeatureEnabled, withFeature } from '../config/features';
 
 // Capability-based flow generation rules
 const CAPABILITY_FLOWS: Record<string, {
@@ -57,16 +56,10 @@ const CAPABILITY_FLOWS: Record<string, {
   }
 };
 
-// Generate Foundry-specific flows (gated by FOUNDRY feature flag)
+// Generate Foundry-specific flows (always enabled)
 async function generateFoundryFlows(foundryNode: Node, allNodes: Node[]): Promise<Flow[]> {
-  const foundryEnabled = await isFeatureEnabled('FOUNDRY');
-  if (!foundryEnabled) {
-    return [];
-  }
-  
-  return withFeature('FOUNDRY', () => {
-    try {
-      const flows: Flow[] = [];
+  try {
+    const flows: Flow[] = [];
       
       // Only proceed if this is actually a Foundry node
       if (!foundryNode.id.includes('palantir_foundry') && 
@@ -182,7 +175,6 @@ async function generateFoundryFlows(foundryNode: Node, allNodes: Node[]): Promis
       console.warn('[foundry]', 'Error generating Foundry flows:', error);
       return [];
     }
-  }, []) || [];
 }
 
 // Generate capability-based flows for any system with capabilities
@@ -284,18 +276,15 @@ export async function generateEnhancedFlows(nodes: Node[]): Promise<Flow[]> {
       allFlows.push(...standardFlows);
     });
     
-    // Generate Foundry-specific flows (gated by feature flag)
-    const foundryEnabled = await isFeatureEnabled('FOUNDRY');
-    if (foundryEnabled) {
-      const foundryNodes = nodes.filter(node => 
-        node.id.includes('palantir_foundry') || 
-        node.name.toLowerCase().includes('foundry')
-      );
-      
-      for (const foundryNode of foundryNodes) {
-        const foundryFlows = await generateFoundryFlows(foundryNode, nodes);
-        allFlows.push(...foundryFlows);
-      }
+    // Generate Foundry-specific flows (always enabled)
+    const foundryNodes = nodes.filter(node => 
+      node.id.includes('palantir_foundry') || 
+      node.name.toLowerCase().includes('foundry')
+    );
+    
+    for (const foundryNode of foundryNodes) {
+      const foundryFlows = await generateFoundryFlows(foundryNode, nodes);
+      allFlows.push(...foundryFlows);
     }
     
     // Generate capability-based flows for all nodes

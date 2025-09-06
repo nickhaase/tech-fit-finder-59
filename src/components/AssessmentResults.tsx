@@ -131,9 +131,23 @@ export const AssessmentResults = ({ data, onRestart }: AssessmentResultsProps) =
             <CheckCircle className="w-6 h-6" />
             Assessment Complete
           </div>
-          <h1 className="text-4xl font-bold mb-4">
-            Your Custom MaintainX Integration Architecture
-          </h1>
+          {/* Company Name & Logo */}
+          {data.companyName && (
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <div id="company-logo-placeholder" className="w-12 h-12">
+                {/* Logo will be loaded here via useEffect */}
+              </div>
+              <h1 className="text-4xl font-bold">
+                Your Custom MaintainX Integration Architecture for {data.companyName}
+              </h1>
+            </div>
+          )}
+          
+          {!data.companyName && (
+            <h1 className="text-4xl font-bold mb-4">
+              Your Custom MaintainX Integration Architecture
+            </h1>
+          )}
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
             Based on your tech stack, here's how MaintainX seamlessly integrates with your existing systems to support your maintenance goals.
           </p>

@@ -4,7 +4,6 @@ import { enhanceNodesWithCapabilities } from './enhancedFlowGeneration';
 import { resolveSystemId } from './synonymResolver';
 import { tagNodesWithCapabilities } from './capabilityTagger';
 import { getEnhancedBrands, getFoundrySynonyms } from '../data/foundryBrands';
-import { isFeatureEnabledSync } from '../config/features';
 
 export interface Node {
   id: string;
@@ -151,20 +150,18 @@ function inferCategoryFromSection(sectionId: string, subcategoryId?: string): No
 function findBrandInConfig(config: AppConfig, brandName: string): BrandOption | null {
   console.log(`🔍 Searching for brand: "${brandName}"`);
   
-  // Check Foundry synonyms first (if feature enabled)
-  if (isFeatureEnabledSync('FOUNDRY')) {
-    const foundrySynonyms = getFoundrySynonyms();
-    const foundryMatch = foundrySynonyms[brandName.toLowerCase()];
-    if (foundryMatch) {
-      console.log(`  ✅ Found Foundry synonym match: ${brandName} → ${foundryMatch}`);
-      return {
-        id: 'palantir_foundry',
-        name: 'Palantir Foundry',
-        logo: '/assets/logos/brands/palantir.svg',
-        synonyms: ['Foundry', 'Palantir'],
-        state: 'active'
-      };
-    }
+  // Check Foundry synonyms first (always enabled)
+  const foundrySynonyms = getFoundrySynonyms();
+  const foundryMatch = foundrySynonyms[brandName.toLowerCase()];
+  if (foundryMatch) {
+    console.log(`  ✅ Found Foundry synonym match: ${brandName} → ${foundryMatch}`);
+    return {
+      id: 'palantir_foundry',
+      name: 'Palantir Foundry',
+      logo: '/assets/logos/brands/palantir.svg',
+      synonyms: ['Foundry', 'Palantir'],
+      state: 'active'
+    };
   }
   
   // Search through all sections and subcategories for the brand
@@ -306,6 +303,38 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
       nodes.push(node);
       if (brandInfo?.globalId) seenGlobalIds.add(brandInfo.globalId);
     });
+
+  // Map data analytics systems
+  if (assessmentData.integrations.dataAnalytics) {
+    assessmentData.integrations.dataAnalytics
+      .filter(analytics => analytics.brand !== 'None' && analytics.brand !== 'Not sure')
+      .forEach(analytics => {
+        const brandInfo = findBrandInConfig(config, analytics.brand);
+        const globalId = brandInfo?.globalId || brandInfo?.id || `data-analytics-${analytics.brand}`;
+        
+        if (seenGlobalIds.has(globalId)) return; // Skip duplicates
+        
+        const category = 'DataOps';
+        
+        const node: Node = {
+          id: globalId,
+          name: analytics.brand,
+          logo: brandInfo?.logo,
+          category: category as Node['category'],
+          directionality: 'bidirectional',
+          protocol: ['REST API', 'Webhook', 'Kafka'],
+          frequency: 'near-real-time',
+          tier: CATEGORY_TIER[category as Node['category']],
+          priority: CATEGORY_PRIORITY[category as Node['category']],
+          originalConfig: analytics,
+          capabilities: enhancedCapabilities[brandInfo?.id || ''] || undefined,
+          subLabel: 'DataOps/AI'
+        };
+        
+        nodes.push(node);
+        if (brandInfo?.globalId) seenGlobalIds.add(brandInfo.globalId);
+      });
+  }
   
   // Map automation systems
   assessmentData.integrations.automationScada
