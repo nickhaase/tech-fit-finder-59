@@ -2,12 +2,16 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { featureFlagInitializer } from '@/services/featureFlagInitializer';
 
 export const AuthBootstrap = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
+    // Initialize feature flags early in app lifecycle
+    featureFlagInitializer.initialize().catch(console.error);
+    
     // Check for auth tokens in URL hash (for password reset, magic links, etc.)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const accessToken = hashParams.get('access_token');

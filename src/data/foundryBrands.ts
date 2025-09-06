@@ -1,9 +1,9 @@
 import { CategoryOption } from '@/types/assessment';
-import { isFeatureEnabled } from '../config/features';
+import { isFeatureEnabledSync } from '../config/features';
 
 // Palantir Foundry brand definition (gated by feature flag)
 export function getFoundryBrands(): CategoryOption[] {
-  if (!isFeatureEnabled('FOUNDRY')) {
+  if (!isFeatureEnabledSync('FOUNDRY')) {
     return [];
   }
 
@@ -31,7 +31,7 @@ export function getEnhancedBrands(): Record<string, string[]> {
   const capabilities: Record<string, string[]> = {};
   
   // Only add enhanced capabilities if relevant features are enabled
-  if (isFeatureEnabled('FOUNDRY')) {
+  if (isFeatureEnabledSync('FOUNDRY')) {
     capabilities['palantir_foundry'] = ['insight_to_work', 'asset_health', 'parts_intel', 'fan_in', 'model_sync'];
   }
   
@@ -53,7 +53,7 @@ export function getEnhancedBrands(): Record<string, string[]> {
 
 // Synonym mappings for Foundry (gated by feature flag)
 export function getFoundrySynonyms(): Record<string, string> {
-  if (!isFeatureEnabled('FOUNDRY')) {
+  if (!isFeatureEnabledSync('FOUNDRY')) {
     return {};
   }
   

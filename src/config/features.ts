@@ -32,6 +32,14 @@ export async function isFeatureEnabled(feature: keyof FeatureFlags): Promise<boo
 // Synchronous version for backwards compatibility (uses cache)
 export function isFeatureEnabledSync(feature: keyof FeatureFlags): boolean {
   try {
+    // For database-backed features, check the service cache first
+    if (feature === 'FOUNDRY') {
+      // Try to get from cache - this will return false if not cached yet
+      const cached = featureFlagService['cache'].get(feature);
+      return cached === true;
+    }
+    
+    // Fallback to static config for other features
     return features[feature] === true;
   } catch (error) {
     console.warn('[features]', `Error checking feature ${feature}:`, error);

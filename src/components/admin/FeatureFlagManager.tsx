@@ -51,6 +51,9 @@ export function FeatureFlagManager({ userEmail }: FeatureFlagManagerProps) {
         // Clear cache to ensure fresh data
         featureFlagService.clearCache();
         
+        // Force config refresh for immediate UI updates
+        window.dispatchEvent(new CustomEvent('forceConfigRefresh'));
+        
         toast({
           title: "Success",
           description: `Feature flag "${flagName}" ${enabled ? 'enabled' : 'disabled'}`,

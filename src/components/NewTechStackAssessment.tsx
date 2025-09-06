@@ -31,6 +31,7 @@ import { BrandPicker } from "@/components/BrandPicker";
 import { FollowUpQuestions } from "@/components/FollowUpQuestions";
 import { AssessmentData, IntegrationDetail, SensorIntegration, AutomationIntegration, OtherSystemIntegration } from "@/types/assessment";
 import { ConfigService } from "@/services/configService";
+import { featureFlagInitializer } from "@/services/featureFlagInitializer";
 import { AppConfig } from "@/types/config";
 import { 
   COMPANY_SIZES,
@@ -122,6 +123,9 @@ export const NewTechStackAssessment = ({ onComplete }: NewTechStackAssessmentPro
   const refreshConfig = async () => {
     setIsRefreshing(true);
     try {
+      // Reinitialize feature flags to ensure latest values
+      await featureFlagInitializer.reinitialize();
+      
       const newConfig = ConfigService.getLive();
       setConfig(newConfig);
       setLastRefresh(Date.now());

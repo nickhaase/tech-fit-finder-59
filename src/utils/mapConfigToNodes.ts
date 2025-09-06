@@ -2,7 +2,7 @@ import { AppConfig, BrandOption } from '@/types/config';
 import { AssessmentData, IntegrationDetail } from '@/types/assessment';
 import { enhanceNodesWithCapabilities } from './enhancedFlowGeneration';
 import { getEnhancedBrands, getFoundrySynonyms } from '../data/foundryBrands';
-import { isFeatureEnabled } from '../config/features';
+import { isFeatureEnabledSync } from '../config/features';
 
 export interface Node {
   id: string;
@@ -150,7 +150,7 @@ function findBrandInConfig(config: AppConfig, brandName: string): BrandOption | 
   console.log(`🔍 Searching for brand: "${brandName}"`);
   
   // Check Foundry synonyms first (if feature enabled)
-  if (isFeatureEnabled('FOUNDRY')) {
+  if (isFeatureEnabledSync('FOUNDRY')) {
     const foundrySynonyms = getFoundrySynonyms();
     const foundryMatch = foundrySynonyms[brandName.toLowerCase()];
     if (foundryMatch) {
