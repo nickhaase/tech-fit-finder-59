@@ -66,8 +66,9 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
       const system = systems[systemIndex];
       if (!system) return [];
       
-      // Generate flows for all systems but filter to show only the active system's flows
-      const allFlows = generateEnhancedFlows(systems);
+      // Use sync version for immediate rendering - async version would require state management
+      const { generateEnhancedFlowsSync } = require('../utils/enhancedFlowGeneration');
+      const allFlows = generateEnhancedFlowsSync(systems);
       const systemFlows = allFlows.filter(flow => 
         flow.from === system.id || flow.to === system.id ||
         flow.from.includes(system.id) || flow.to.includes(system.id)

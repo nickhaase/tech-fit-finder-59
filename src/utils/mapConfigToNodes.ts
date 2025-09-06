@@ -1,6 +1,8 @@
 import { AppConfig, BrandOption } from '@/types/config';
 import { AssessmentData, IntegrationDetail } from '@/types/assessment';
 import { enhanceNodesWithCapabilities } from './enhancedFlowGeneration';
+import { resolveSystemId } from './synonymResolver';
+import { tagNodesWithCapabilities } from './capabilityTagger';
 import { getEnhancedBrands, getFoundrySynonyms } from '../data/foundryBrands';
 import { isFeatureEnabledSync } from '../config/features';
 
@@ -275,7 +277,9 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
   assessmentData.integrations.sensorsMonitoring
     .filter(sensor => sensor.brand !== 'None' && sensor.brand !== 'Not sure')
     .forEach(sensor => {
-      const brandInfo = findBrandInConfig(config, sensor.brand);
+      // Resolve sensor brand name using synonym map
+      const resolvedBrand = resolveSystemId(sensor.brand, config.synonymMap || {});
+      const brandInfo = findBrandInConfig(config, resolvedBrand);
       const globalId = brandInfo?.globalId || brandInfo?.id || `sensor-${sensor.brand}`;
       
       if (seenGlobalIds.has(globalId)) return; // Skip duplicates
@@ -380,11 +384,12 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
     nodeNames: nodes.map(n => `${n.name} (${n.category})`)
   });
 
-  // Enhance nodes with capabilities before returning
-  const enhancedNodes = enhanceNodesWithCapabilities(nodes);
+  // Enhance nodes with capabilities (legacy) and new capability tagger
+  const legacyEnhanced = enhanceNodesWithCapabilities(nodes);
+  const capabilityEnhanced = tagNodesWithCapabilities(legacyEnhanced);
   
   // Sort by priority (closer to hub) then alphabetically
-  return enhancedNodes.sort((a, b) => {
+  return capabilityEnhanced.sort((a, b) => {
     if (a.priority !== b.priority) return a.priority - b.priority;
     return a.name.localeCompare(b.name);
   });

@@ -58,7 +58,12 @@ const CAPABILITY_FLOWS: Record<string, {
 };
 
 // Generate Foundry-specific flows (gated by FOUNDRY feature flag)
-function generateFoundryFlows(foundryNode: Node, allNodes: Node[]): Flow[] {
+async function generateFoundryFlows(foundryNode: Node, allNodes: Node[]): Promise<Flow[]> {
+  const foundryEnabled = await isFeatureEnabled('FOUNDRY');
+  if (!foundryEnabled) {
+    return [];
+  }
+  
   return withFeature('FOUNDRY', () => {
     try {
       const flows: Flow[] = [];
@@ -269,7 +274,7 @@ function generateCapabilityFlows(node: Node, allNodes: Node[]): Flow[] {
 }
 
 // Enhanced flow generation that includes both standard and capability-based flows
-export function generateEnhancedFlows(nodes: Node[]): Flow[] {
+export async function generateEnhancedFlows(nodes: Node[]): Promise<Flow[]> {
   try {
     const allFlows: Flow[] = [];
     
@@ -280,16 +285,17 @@ export function generateEnhancedFlows(nodes: Node[]): Flow[] {
     });
     
     // Generate Foundry-specific flows (gated by feature flag)
-    if (isFeatureEnabled('FOUNDRY')) {
+    const foundryEnabled = await isFeatureEnabled('FOUNDRY');
+    if (foundryEnabled) {
       const foundryNodes = nodes.filter(node => 
         node.id.includes('palantir_foundry') || 
         node.name.toLowerCase().includes('foundry')
       );
       
-      foundryNodes.forEach(foundryNode => {
-        const foundryFlows = generateFoundryFlows(foundryNode, nodes);
+      for (const foundryNode of foundryNodes) {
+        const foundryFlows = await generateFoundryFlows(foundryNode, nodes);
         allFlows.push(...foundryFlows);
-      });
+      }
     }
     
     // Generate capability-based flows for all nodes
@@ -309,6 +315,39 @@ export function generateEnhancedFlows(nodes: Node[]): Flow[] {
     
   } catch (error) {
     console.warn('[enhancedFlows]', 'Error in enhanced flow generation:', error);
+    // Fallback to standard flow generation
+    return nodes.flatMap(node => generateFlowsForNode(node));
+  }
+}
+
+// Synchronous version for backward compatibility
+export function generateEnhancedFlowsSync(nodes: Node[]): Flow[] {
+  try {
+    const allFlows: Flow[] = [];
+    
+    // Generate standard flows for each node
+    nodes.forEach(node => {
+      const standardFlows = generateFlowsForNode(node);
+      allFlows.push(...standardFlows);
+    });
+    
+    // Generate capability-based flows for all nodes
+    nodes.forEach(node => {
+      const capabilityFlows = generateCapabilityFlows(node, nodes);
+      allFlows.push(...capabilityFlows);
+    });
+    
+    // Deduplicate flows by ID
+    const uniqueFlows = allFlows.filter((flow, index, self) => 
+      index === self.findIndex(f => f.id === flow.id)
+    );
+    
+    console.log('[enhancedFlowsSync] Generated', uniqueFlows.length, 'total flows from', nodes.length, 'nodes');
+    
+    return uniqueFlows;
+    
+  } catch (error) {
+    console.warn('[enhancedFlowsSync]', 'Error in enhanced flow generation:', error);
     // Fallback to standard flow generation
     return nodes.flatMap(node => generateFlowsForNode(node));
   }
