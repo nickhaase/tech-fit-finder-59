@@ -4,7 +4,7 @@ import { ArrowRight, Database, Factory, Zap, BarChart3, Settings, FileText, Wifi
 import maintainxLogo from "@/assets/logos/maintainx-logo.png";
 import { mapConfigToNodes, Node } from "@/utils/mapConfigToNodes";
 import { Flow } from "@/utils/generateFlows";
-import { generateEnhancedFlows } from "@/utils/enhancedFlowGeneration";
+import { generateEnhancedFlowsSync } from "@/utils/enhancedFlowGeneration";
 import { ConfigService } from "@/services/configService";
 import { Button } from "@/components/ui/button";
 import { ExportDialog } from "@/components/ExportDialog";
