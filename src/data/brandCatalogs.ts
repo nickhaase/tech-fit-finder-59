@@ -336,8 +336,4 @@ export const KPIS = [
   { id: 'oee', name: 'Overall Equipment Effectiveness (OEE)' },
 ];
 
-// Data Analytics Categories with DataOps support
-export const DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
-  ...getFoundryBrands(), // Conditionally include Foundry brands
-  // Add other data analytics categories here as needed
-];
+// Remove this export - DATA_ANALYTICS_CATEGORIES is now defined in newSectionCatalogs.ts

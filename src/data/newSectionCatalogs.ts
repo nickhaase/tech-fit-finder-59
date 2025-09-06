@@ -1,4 +1,5 @@
 import { CategoryOption } from '@/types/assessment';
+import { getFoundryBrands } from './foundryBrands';
 
 // Data & Analytics Categories
 export const DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
@@ -81,6 +82,8 @@ export const DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
       { id: 'alation', name: 'Alation', commonNames: ['Alation Data Catalog'] },
     ]
   },
+  // Add Foundry brands conditionally
+  ...getFoundryBrands(),
 ];
 
 // Connectivity & Edge Category
