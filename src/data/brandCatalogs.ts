@@ -12,6 +12,7 @@ import assetwatchLogo from "@/assets/logos/assetwatch-logo.png";
 import procoreLogo from "@/assets/logos/procore-logo.png";
 import tulipLogo from "@/assets/logos/tulip-logo.png";
 import machinemetricsLogo from "@/assets/logos/machinemetrics-logo.png";
+import { getFoundryBrands } from './foundryBrands';
 
 export const ERP_SYSTEMS: CategoryOption[] = [
   {
@@ -333,4 +334,10 @@ export const KPIS = [
   { id: 'first_time_fix', name: 'First-Time Fix Rate' },
   { id: 'audit_findings', name: 'Audit Findings Reduction' },
   { id: 'oee', name: 'Overall Equipment Effectiveness (OEE)' },
+];
+
+// Data Analytics Categories with DataOps support
+export const DATA_ANALYTICS_CATEGORIES: CategoryOption[] = [
+  ...getFoundryBrands(), // Conditionally include Foundry brands
+  // Add other data analytics categories here as needed
 ];

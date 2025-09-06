@@ -3,7 +3,8 @@ import { AssessmentData } from "@/types/assessment";
 import { ArrowRight, Database, Factory, Zap, BarChart3, Settings, FileText, Wifi, Download } from "lucide-react";
 import maintainxLogo from "@/assets/logos/maintainx-logo.png";
 import { mapConfigToNodes, Node } from "@/utils/mapConfigToNodes";
-import { generateFlowsForNode, Flow } from "@/utils/generateFlows";
+import { Flow } from "@/utils/generateFlows";
+import { generateEnhancedFlows } from "@/utils/enhancedFlowGeneration";
 import { ConfigService } from "@/services/configService";
 import { Button } from "@/components/ui/button";
 import { ExportDialog } from "@/components/ExportDialog";
@@ -59,14 +60,25 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
     }
   }, [data]);
 
-  // Generate data flows based on system configurations
+  // Generate enhanced data flows for the active system
   const generateDataFlows = (systemIndex: number): Flow[] => {
-    const system = systems[systemIndex];
-    if (!system) return [];
-    
-    const flows = generateFlowsForNode(system);
-    console.log(`Generated ${flows.length} flows for system:`, system.name, flows);
-    return flows;
+    try {
+      const system = systems[systemIndex];
+      if (!system) return [];
+      
+      // Generate flows for all systems but filter to show only the active system's flows
+      const allFlows = generateEnhancedFlows(systems);
+      const systemFlows = allFlows.filter(flow => 
+        flow.from === system.id || flow.to === system.id ||
+        flow.from.includes(system.id) || flow.to.includes(system.id)
+      );
+      
+      console.log(`Generated ${systemFlows.length} enhanced flows for system:`, system.name);
+      return systemFlows;
+    } catch (error) {
+      console.warn('[dataFlows]', 'Error generating flows:', error);
+      return [];
+    }
   };
 
   useEffect(() => {
@@ -169,6 +181,11 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm text-foreground flex items-center gap-2 flex-wrap">
                       <span className="truncate">{system.name}</span>
+                      {system.subLabel && (
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap">
+                          {system.subLabel}
+                        </span>
+                      )}
                       <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground whitespace-nowrap">
                         {system.category}
                       </span>
@@ -179,6 +196,12 @@ export const DataFlowVisualization = ({ data }: DataFlowVisualizationProps) => {
                         <>
                           <span>•</span>
                           <span>{system.protocol[0]}</span>
+                        </>
+                      )}
+                      {system.capabilities && system.capabilities.length > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-primary">{system.capabilities.length} capabilities</span>
                         </>
                       )}
                     </div>

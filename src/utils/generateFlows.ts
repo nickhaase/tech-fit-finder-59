@@ -9,6 +9,9 @@ export interface Flow {
   frequency: Node['frequency'];
   protocol: string;
   color: 'flow-primary' | 'flow-secondary' | 'flow-warning';
+  // NEW: Optional domain and performance metrics
+  domain?: 'WorkOrders' | 'Assets' | 'Parts' | 'Telemetry' | 'Users' | 'Events' | 'Quality';
+  avgLatencyMs?: number;
 }
 
 const FLOW_RULES: Record<Node['category'], {
@@ -118,46 +121,64 @@ const FLOW_RULES: Record<Node['category'], {
     outbound: [
       { module: 'work-orders', dataType: 'Status Updates', color: 'flow-secondary' }
     ]
+  },
+  // NEW: DataOps flow rules for Palantir Foundry and similar systems
+  'DataOps': {
+    inbound: [
+      { module: 'analytics', dataType: 'Model Inputs', color: 'flow-secondary' },
+      { module: 'work-orders', dataType: 'Historical Data', color: 'flow-primary' },
+      { module: 'assets', dataType: 'Asset Telemetry', color: 'flow-secondary' }
+    ],
+    outbound: [
+      { module: 'work-orders', dataType: 'Recommended WO', color: 'flow-primary' },
+      { module: 'assets', dataType: 'Asset Health Score', color: 'flow-warning' },
+      { module: 'work-orders', dataType: 'Parts/ETA Intelligence', color: 'flow-secondary' }
+    ]
   }
 };
 
 export function generateFlowsForNode(node: Node): Flow[] {
-  const flows: Flow[] = [];
-  const rules = FLOW_RULES[node.category];
-  
-  if (!rules) return flows;
-  
-  // Generate inbound flows (to MaintainX)
-  if (node.directionality === 'inbound' || node.directionality === 'bidirectional') {
-    rules.inbound.forEach((rule, index) => {
-      flows.push({
-        id: `${node.id}-to-${rule.module}-${index}`,
-        from: node.id,
-        to: rule.module,
-        dataType: rule.dataType,
-        direction: 'inbound',
-        frequency: node.frequency,
-        protocol: node.protocol[0] || 'REST',
-        color: rule.color
+  try {
+    const flows: Flow[] = [];
+    const rules = FLOW_RULES[node.category];
+    
+    if (!rules) return flows;
+    
+    // Generate inbound flows (to MaintainX)
+    if (node.directionality === 'inbound' || node.directionality === 'bidirectional') {
+      rules.inbound.forEach((rule, index) => {
+        flows.push({
+          id: `${node.id}-to-${rule.module}-${index}`,
+          from: node.id,
+          to: rule.module,
+          dataType: rule.dataType,
+          direction: 'inbound',
+          frequency: node.frequency,
+          protocol: node.protocol[0] || 'REST',
+          color: rule.color
+        });
       });
-    });
-  }
-  
-  // Generate outbound flows (from MaintainX)
-  if (node.directionality === 'outbound' || node.directionality === 'bidirectional') {
-    rules.outbound.forEach((rule, index) => {
-      flows.push({
-        id: `${rule.module}-to-${node.id}-${index}`,
-        from: rule.module,
-        to: node.id,
-        dataType: rule.dataType,
-        direction: 'outbound',
-        frequency: node.frequency,
-        protocol: node.protocol[0] || 'REST',
-        color: rule.color
+    }
+    
+    // Generate outbound flows (from MaintainX)
+    if (node.directionality === 'outbound' || node.directionality === 'bidirectional') {
+      rules.outbound.forEach((rule, index) => {
+        flows.push({
+          id: `${rule.module}-to-${node.id}-${index}`,
+          from: rule.module,
+          to: node.id,
+          dataType: rule.dataType,
+          direction: 'outbound',
+          frequency: node.frequency,
+          protocol: node.protocol[0] || 'REST',
+          color: rule.color
+        });
       });
-    });
+    }
+    
+    return flows;
+  } catch (error) {
+    console.warn('[generateFlows]', 'Error generating flows for node:', node.name, error);
+    return []; // Fail-closed: return empty flows on error
   }
-  
-  return flows;
 }

@@ -1,5 +1,8 @@
 import { AppConfig, BrandOption } from '@/types/config';
 import { AssessmentData, IntegrationDetail } from '@/types/assessment';
+import { enhanceNodesWithCapabilities } from './enhancedFlowGeneration';
+import { getEnhancedBrands, getFoundrySynonyms } from '../data/foundryBrands';
+import { isFeatureEnabled } from '../config/features';
 
 export interface Node {
   id: string;
@@ -7,13 +10,16 @@ export interface Node {
   logo?: string;
   category: 'ERP' | 'MES' | 'SCADA' | 'PLC' | 'Sensors' | 'Historian' |
            'Inventory/WMS' | 'Workflow/ITSM/iPaaS' | 'Legacy CMMS/EAM' |
-           'Asset Tracking' | 'Construction' | 'Other';
+           'Asset Tracking' | 'Construction' | 'DataOps' | 'Other';
   directionality: 'bidirectional' | 'inbound' | 'outbound';
   protocol: string[];
   frequency: 'real-time' | 'near-real-time' | 'scheduled';
   tier: 'business' | 'operational';
   priority: number;
   originalConfig?: IntegrationDetail;
+  // NEW: Optional capabilities for enhanced effects
+  capabilities?: string[];
+  subLabel?: string; // NEW: For display labels like "DataOps/AI"
 }
 
 // Category mapping from section IDs to Node categories
@@ -35,6 +41,7 @@ const SECTION_TO_CATEGORY_MAP: Record<string, Node['category']> = {
   'asset_tracking': 'Asset Tracking',
   'construction': 'Construction',
   'automation_scada': 'SCADA',
+  'dataops_integration': 'DataOps', // NEW: DataOps category
   'other_systems': 'Other'
 };
 
@@ -46,6 +53,7 @@ const CATEGORY_PRIORITY: Record<Node['category'], number> = {
   'MES': 2,
   'Inventory/WMS': 2,
   'Legacy CMMS/EAM': 2,
+  'DataOps': 2, // NEW: DataOps at operations level
   // Level 2: Supervisory Control
   'SCADA': 3,
   'Workflow/ITSM/iPaaS': 3,
@@ -73,6 +81,7 @@ const CATEGORY_PROTOCOLS: Record<Node['category'], string[]> = {
   'Legacy CMMS/EAM': ['SOAP', 'SFTP', 'ODBC'],
   'Asset Tracking': ['REST', 'MQTT', 'Webhooks'],
   'Construction': ['REST', 'Webhooks'],
+  'DataOps': ['REST API', 'Webhook', 'Kafka'], // NEW: DataOps protocols
   'Other': ['REST']
 };
 
@@ -89,6 +98,7 @@ const CATEGORY_DIRECTIONALITY: Record<Node['category'], Node['directionality']> 
   'Legacy CMMS/EAM': 'outbound',
   'Asset Tracking': 'bidirectional',
   'Construction': 'bidirectional',
+  'DataOps': 'bidirectional', // NEW: DataOps is bidirectional
   'Other': 'bidirectional'
 };
 
@@ -105,6 +115,7 @@ const CATEGORY_FREQUENCY: Record<Node['category'], Node['frequency']> = {
   'Legacy CMMS/EAM': 'scheduled',
   'Asset Tracking': 'near-real-time',
   'Construction': 'near-real-time',
+  'DataOps': 'near-real-time', // NEW: DataOps frequency
   'Other': 'near-real-time'
 };
 
@@ -121,6 +132,7 @@ const CATEGORY_TIER: Record<Node['category'], Node['tier']> = {
   'Legacy CMMS/EAM': 'business',
   'Asset Tracking': 'operational',
   'Construction': 'business',
+  'DataOps': 'business', // NEW: DataOps is business tier
   'Other': 'business'
 };
 
@@ -136,6 +148,22 @@ function inferCategoryFromSection(sectionId: string, subcategoryId?: string): No
 
 function findBrandInConfig(config: AppConfig, brandName: string): BrandOption | null {
   console.log(`🔍 Searching for brand: "${brandName}"`);
+  
+  // Check Foundry synonyms first (if feature enabled)
+  if (isFeatureEnabled('FOUNDRY')) {
+    const foundrySynonyms = getFoundrySynonyms();
+    const foundryMatch = foundrySynonyms[brandName.toLowerCase()];
+    if (foundryMatch) {
+      console.log(`  ✅ Found Foundry synonym match: ${brandName} → ${foundryMatch}`);
+      return {
+        id: 'palantir_foundry',
+        name: 'Palantir Foundry',
+        logo: '/assets/logos/brands/palantir.svg',
+        synonyms: ['Foundry', 'Palantir'],
+        state: 'active'
+      };
+    }
+  }
   
   // Search through all sections and subcategories for the brand
   for (const section of config.sections) {
@@ -205,6 +233,7 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
   
   const nodes: Node[] = [];
   const seenGlobalIds = new Set<string>();
+  const enhancedCapabilities = getEnhancedBrands();
   
   // Map ERP system
   if (assessmentData.integrations.erp && 
@@ -216,19 +245,21 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
     const brandInfo = findBrandInConfig(config, erpConfig.brand);
     console.log('🔍 ERP brand search result:', brandInfo ? `Found: ${brandInfo.name}` : 'Not found');
     
-    const node: Node = {
-      id: brandInfo?.globalId || brandInfo?.id || `erp-${erpConfig.brand}`,
-      name: erpConfig.brand,
-      logo: brandInfo?.logo,
-      category: 'ERP',
-      directionality: (erpConfig.directionality === 'one-way-to' ? 'outbound' : 
-                      erpConfig.directionality === 'one-way-from' ? 'inbound' : 'bidirectional'),
-      protocol: erpConfig.protocol || CATEGORY_PROTOCOLS['ERP'],
-      frequency: erpConfig.frequency || CATEGORY_FREQUENCY['ERP'],
-      tier: CATEGORY_TIER['ERP'],
-      priority: CATEGORY_PRIORITY['ERP'],
-      originalConfig: erpConfig
-    };
+      const node: Node = {
+        id: brandInfo?.globalId || brandInfo?.id || `erp-${erpConfig.brand}`,
+        name: erpConfig.brand,
+        logo: brandInfo?.logo,
+        category: 'ERP',
+        directionality: (erpConfig.directionality === 'one-way-to' ? 'outbound' : 
+                        erpConfig.directionality === 'one-way-from' ? 'inbound' : 'bidirectional'),
+        protocol: erpConfig.protocol || CATEGORY_PROTOCOLS['ERP'],
+        frequency: erpConfig.frequency || CATEGORY_FREQUENCY['ERP'],
+        tier: CATEGORY_TIER['ERP'],
+        priority: CATEGORY_PRIORITY['ERP'],
+        originalConfig: erpConfig,
+        capabilities: enhancedCapabilities[brandInfo?.id || ''] || undefined,
+        subLabel: brandInfo?.id === 'palantir_foundry' ? 'DataOps/AI' : undefined
+      };
     
     console.log('✅ Created ERP node:', node);
     nodes.push(node);
@@ -263,7 +294,9 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
         frequency: sensor.frequency || CATEGORY_FREQUENCY[category as Node['category']],
         tier: CATEGORY_TIER[category as Node['category']],
         priority: CATEGORY_PRIORITY[category as Node['category']],
-        originalConfig: sensor
+        originalConfig: sensor,
+        capabilities: enhancedCapabilities[brandInfo?.id || ''] || undefined,
+        subLabel: brandInfo?.id === 'palantir_foundry' ? 'DataOps/AI' : undefined
       };
       
       nodes.push(node);
@@ -294,7 +327,9 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
         frequency: automation.frequency || CATEGORY_FREQUENCY[category as Node['category']],
         tier: CATEGORY_TIER[category as Node['category']],
         priority: CATEGORY_PRIORITY[category as Node['category']],
-        originalConfig: automation
+        originalConfig: automation,
+        capabilities: enhancedCapabilities[brandInfo?.id || ''] || undefined,
+        subLabel: brandInfo?.id === 'palantir_foundry' ? 'DataOps/AI' : undefined
       };
       
       nodes.push(node);
@@ -327,7 +362,9 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
         frequency: system.frequency || CATEGORY_FREQUENCY[category as Node['category']],
         tier: CATEGORY_TIER[category as Node['category']],
         priority: CATEGORY_PRIORITY[category as Node['category']],
-        originalConfig: system
+        originalConfig: system,
+        capabilities: enhancedCapabilities[brandInfo?.id || ''] || undefined,
+        subLabel: brandInfo?.id === 'palantir_foundry' ? 'DataOps/AI' : undefined
       };
       
       nodes.push(node);
@@ -343,8 +380,11 @@ export function mapConfigToNodes(config: AppConfig, assessmentData: AssessmentDa
     nodeNames: nodes.map(n => `${n.name} (${n.category})`)
   });
 
+  // Enhance nodes with capabilities before returning
+  const enhancedNodes = enhanceNodesWithCapabilities(nodes);
+  
   // Sort by priority (closer to hub) then alphabetically
-  return nodes.sort((a, b) => {
+  return enhancedNodes.sort((a, b) => {
     if (a.priority !== b.priority) return a.priority - b.priority;
     return a.name.localeCompare(b.name);
   });
