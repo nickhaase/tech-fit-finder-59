@@ -32,6 +32,7 @@ serve(async (req) => {
     console.log(`Fetching logo for company: ${companyName}`);
 
     let logoUrl: string | null = null;
+    let storedLogoUrl: string | null = null;
 
     // Try Clearbit Logo API first
     try {
@@ -78,11 +79,49 @@ serve(async (req) => {
       }
     }
 
-    // Update company with logo URL
+    // If we found a logo URL, download and store it in Supabase Storage
+    if (logoUrl) {
+      try {
+        console.log(`Downloading logo from: ${logoUrl}`);
+        const logoResponse = await fetch(logoUrl, { 
+          signal: AbortSignal.timeout(10000)
+        });
+        
+        if (logoResponse.ok) {
+          const logoBlob = await logoResponse.blob();
+          const fileName = `${companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}.png`;
+          
+          // Upload to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('company-logos')
+            .upload(fileName, logoBlob, {
+              contentType: 'image/png',
+              upsert: false
+            });
+
+          if (uploadError) {
+            console.error('Error uploading logo to storage:', uploadError);
+          } else {
+            // Get the public URL
+            const { data: publicUrlData } = supabase.storage
+              .from('company-logos')
+              .getPublicUrl(fileName);
+            
+            storedLogoUrl = publicUrlData.publicUrl;
+            console.log(`Logo uploaded to storage: ${storedLogoUrl}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error downloading/storing logo:', error);
+      }
+    }
+
+    // Update company with logo URL (prefer stored URL over external URL)
+    const finalLogoUrl = storedLogoUrl || logoUrl;
     const { error: updateError } = await supabase
       .from('companies')
       .update({
-        logo_url: logoUrl,
+        logo_url: finalLogoUrl,
         logo_cached_at: new Date().toISOString()
       })
       .eq('id', companyId);
@@ -95,12 +134,13 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Successfully updated logo for ${companyName}: ${logoUrl || 'No logo found'}`);
+    console.log(`Successfully updated logo for ${companyName}: ${finalLogoUrl || 'No logo found'}`);
 
     return new Response(JSON.stringify({ 
       success: true, 
-      logoUrl,
-      message: logoUrl ? 'Logo found and cached' : 'No logo found, but company updated'
+      logoUrl: finalLogoUrl,
+      storedInStorage: !!storedLogoUrl,
+      message: finalLogoUrl ? 'Logo found and cached in Storage' : 'No logo found, but company updated'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
