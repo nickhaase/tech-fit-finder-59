@@ -65,21 +65,27 @@ export const ERP_SYSTEMS: CategoryOption[] = [
 
 export const SENSOR_CATEGORIES: CategoryOption[] = [
   {
-    id: 'iot_sensors',
-    name: 'IoT Sensors',
-    description: 'General purpose IoT sensors for temperature, pressure, vibration',
+    id: 'sensors',
+    name: 'Sensors',
+    description: 'General sensors for temperature, pressure, vibration, environmental monitoring, and safety',
     brands: [
+      // Consolidated brands from IoT, Environmental, and Safety sensors
       { id: 'ifm', name: 'IFM', commonNames: ['IFM Electronic'] },
       { id: 'banner', name: 'Banner Engineering', commonNames: ['Banner'] },
       { id: 'fluke', name: 'Fluke', commonNames: ['Fluke Corporation'] },
       { id: 'flir', name: 'FLIR', commonNames: ['Teledyne FLIR'] },
       { id: 'phoenix_contact', name: 'Phoenix Contact', commonNames: [] },
-      { id: 'honeywell_sensors', name: 'Honeywell', commonNames: [] },
+      { id: 'honeywell_sensors', name: 'Honeywell', commonNames: ['Honeywell Analytics'] },
       { id: 'siemens_sensors', name: 'Siemens', commonNames: [], logo: siemensLogo },
       { id: 'schneider_sensors', name: 'Schneider Electric', commonNames: [], logo: schneiderLogo },
       { id: 'rockwell_sensors', name: 'Rockwell/Allen-Bradley', commonNames: ['Allen-Bradley', 'AB'] },
       { id: 'ni_sensors', name: 'National Instruments', commonNames: ['NI'] },
       { id: 'zebra_sensors', name: 'Zebra Technologies', commonNames: ['Zebra'] },
+      { id: 'vaisala', name: 'Vaisala', commonNames: [] },
+      { id: 'bosch_env', name: 'Bosch', commonNames: ['Bosch Sensortec'] },
+      { id: 'msa', name: 'MSA Safety', commonNames: ['MSA'] },
+      { id: 'drager', name: 'Dräger', commonNames: ['Draeger'] },
+      { id: 'sick', name: 'SICK', commonNames: ['SICK AG'] },
     ]
   },
   {
@@ -93,45 +99,24 @@ export const SENSOR_CATEGORIES: CategoryOption[] = [
       { id: 'honeywell_meters', name: 'Honeywell', commonNames: [] },
     ]
   },
-    {
-      id: 'condition_monitoring',
-      name: 'Condition Monitoring',
-      description: 'Predictive maintenance and asset health sensors',
-      brands: [
-        { id: 'emerson_ams', name: 'Emerson AMS', commonNames: ['AMS Suite'] },
-        { id: 'skf', name: 'SKF', commonNames: ['SKF Condition Monitoring'] },
-        { id: 'pruftechnik', name: 'Pruftechnik', commonNames: [] },
-        { id: 'ue_systems', name: 'UE Systems', commonNames: [] },
-        { id: 'bentley_nevada', name: 'Bentley Nevada', commonNames: [] },
-        { id: 'assetwatch', name: 'AssetWatch®', commonNames: ['AssetWatch'], logo: assetwatchLogo },
-        { id: 'augury', name: 'Augury', commonNames: [] },
-        { id: 'guidewheel', name: 'Guidewheel', commonNames: [] },
-        { id: 'machinemetrics', name: 'MachineMetrics', commonNames: [], logo: machinemetricsLogo },
-        { id: 'shoreline_ai', name: 'Shoreline AI, Inc.', commonNames: ['Shoreline AI'] },
-        { id: 'urban_io', name: 'Urban.io', commonNames: ['Urban IO'] },
-        { id: 'waites', name: 'WAITES', commonNames: [] },
-        { id: 'ugowork', name: 'UgoWork', commonNames: [] },
-      ]
-    },
   {
-    id: 'environmental_sensors',
-    name: 'Environmental Sensors',
-    description: 'Air quality, humidity, and environmental monitoring',
+    id: 'condition_monitoring',
+    name: 'Condition Monitoring',
+    description: 'Predictive maintenance and asset health sensors',
     brands: [
-      { id: 'honeywell_env', name: 'Honeywell', commonNames: [] },
-      { id: 'vaisala', name: 'Vaisala', commonNames: [] },
-      { id: 'bosch_env', name: 'Bosch', commonNames: ['Bosch Sensortec'] },
-    ]
-  },
-  {
-    id: 'safety_sensors',
-    name: 'Safety Sensors',
-    description: 'Gas detection, motion sensors, safety monitoring',
-    brands: [
-      { id: 'honeywell_safety', name: 'Honeywell', commonNames: ['Honeywell Analytics'] },
-      { id: 'msa', name: 'MSA Safety', commonNames: ['MSA'] },
-      { id: 'drager', name: 'Dräger', commonNames: ['Draeger'] },
-      { id: 'sick', name: 'SICK', commonNames: ['SICK AG'] },
+      { id: 'emerson_ams', name: 'Emerson AMS', commonNames: ['AMS Suite'] },
+      { id: 'skf', name: 'SKF', commonNames: ['SKF Condition Monitoring'] },
+      { id: 'pruftechnik', name: 'Pruftechnik', commonNames: [] },
+      { id: 'ue_systems', name: 'UE Systems', commonNames: [] },
+      { id: 'bentley_nevada', name: 'Bentley Nevada', commonNames: [] },
+      { id: 'assetwatch', name: 'AssetWatch®', commonNames: ['AssetWatch'], logo: assetwatchLogo },
+      { id: 'augury', name: 'Augury', commonNames: [] },
+      { id: 'guidewheel', name: 'Guidewheel', commonNames: [] },
+      { id: 'machinemetrics', name: 'MachineMetrics', commonNames: [], logo: machinemetricsLogo },
+      { id: 'shoreline_ai', name: 'Shoreline AI, Inc.', commonNames: ['Shoreline AI'] },
+      { id: 'urban_io', name: 'Urban.io', commonNames: ['Urban IO'] },
+      { id: 'waites', name: 'WAITES', commonNames: [] },
+      { id: 'ugowork', name: 'UgoWork', commonNames: [] },
     ]
   }
 ];

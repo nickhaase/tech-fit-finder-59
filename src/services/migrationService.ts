@@ -88,6 +88,67 @@ export class MigrationService {
   }
 
   /**
+   * Consolidates sensor categories from legacy fragmented structure
+   * Merges IoT, Environmental, and Safety sensors into a single 'sensors' category
+   */
+  static consolidateSensorCategories(config: AppConfig): AppConfig {
+    console.log('🔄 Consolidating sensor categories...');
+    
+    const updatedConfig = JSON.parse(JSON.stringify(config));
+    const sensorsSection = updatedConfig.sections.find((s: any) => s.id === 'sensors_monitoring');
+    
+    if (sensorsSection?.subcategories) {
+      // Find the fragmented sensor categories
+      const iotSensors = sensorsSection.subcategories.find((sub: any) => sub.id === 'iot_sensors');
+      const envSensors = sensorsSection.subcategories.find((sub: any) => sub.id === 'environmental_sensors');
+      const safetySensors = sensorsSection.subcategories.find((sub: any) => sub.id === 'safety_sensors');
+      
+      if (iotSensors || envSensors || safetySensors) {
+        // Create consolidated sensors category
+        const consolidatedSensors = {
+          id: 'sensors',
+          label: 'Sensors',
+          description: 'General sensors for temperature, pressure, vibration, environmental monitoring, and safety',
+          multi: true,
+          systemOptions: ['None', 'Not sure'],
+          options: []
+        };
+        
+        // Merge all sensor brands
+        const allSensorBrands: any[] = [];
+        [iotSensors, envSensors, safetySensors].forEach(category => {
+          if (category?.options) {
+            allSensorBrands.push(...category.options);
+          }
+        });
+        
+        // Remove duplicates based on brand ID and consolidate
+        const uniqueBrands = allSensorBrands.reduce((acc: any[], brand: any) => {
+          const existing = acc.find(b => b.id === brand.id || b.name === brand.name);
+          if (!existing) {
+            acc.push(brand);
+          }
+          return acc;
+        }, []);
+        
+        consolidatedSensors.options = uniqueBrands;
+        
+        // Remove old fragmented categories and add consolidated one
+        sensorsSection.subcategories = sensorsSection.subcategories.filter((sub: any) => 
+          !['iot_sensors', 'environmental_sensors', 'safety_sensors'].includes(sub.id)
+        );
+        
+        // Add consolidated category at the beginning
+        sensorsSection.subcategories.unshift(consolidatedSensors);
+        
+        console.log(`✅ Consolidated ${uniqueBrands.length} sensor brands into single category`);
+      }
+    }
+    
+    return updatedConfig;
+  }
+
+  /**
    * Migrate legacy assessments that selected "platforms_historians" to new "data_analytics.historians"
    */
   static migrateHistoriansAlias(config: AppConfig): AppConfig {
@@ -211,6 +272,7 @@ export class MigrationService {
     
     // Run migrations in order
     let migratedConfig = config;
+    migratedConfig = this.consolidateSensorCategories(migratedConfig);
     migratedConfig = this.migrateHistoriansAlias(migratedConfig);
     migratedConfig = this.deduplicateSections(migratedConfig);
     migratedConfig = this.consolidateCrossListedBrands(migratedConfig);

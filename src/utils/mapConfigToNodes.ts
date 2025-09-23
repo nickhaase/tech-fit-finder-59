@@ -9,9 +9,12 @@ export interface Node {
   id: string;
   name: string;
   logo?: string;
-  category: 'ERP' | 'MES' | 'SCADA' | 'PLC' | 'Sensors' | 'Historian' |
-           'Inventory/WMS' | 'Workflow/ITSM/iPaaS' | 'Legacy CMMS/EAM' |
-           'Asset Tracking' | 'Construction' | 'DataOps' | 'Other';
+  category: 'ERP' | 'MES' | 'SCADA' | 'PLC' | 'DCS' | 'HMI' | 'Sensors' | 'Smart Meters' | 'Condition Monitoring' | 
+           'Historian' | 'Historians / Time-Series' | 'Inventory/WMS' | 'Inventory/Warehouse' | 
+           'Workflow/ITSM/iPaaS' | 'Legacy CMMS/EAM' | 'Asset Tracking' | 'Construction' | 'Construction Platforms' |
+           'Consulting & System Integrators' | 'Data Warehouse / Lakehouse' | 'Streaming & Eventing' |
+           'BI / Visualization' | 'ETL/ELT & Data Integration' | 'Data Governance / Catalog' |
+           'DataOps' | 'DataOps/Integration Platforms' | 'Connectivity & Edge' | 'Other';
   directionality: 'bidirectional' | 'inbound' | 'outbound';
   protocol: string[];
   frequency: 'real-time' | 'near-real-time' | 'scheduled';
@@ -26,24 +29,32 @@ export interface Node {
 // Category mapping from section IDs to Node categories
 const SECTION_TO_CATEGORY_MAP: Record<string, Node['category']> = {
   'erp': 'ERP',
-  'mes': 'MES',
+  // Consolidated sensor categories
+  'sensors': 'Sensors',
+  'iot_sensors': 'Sensors', // Legacy mapping
+  'environmental_sensors': 'Sensors', // Legacy mapping
+  'safety_sensors': 'Sensors', // Legacy mapping
+  'smart_meters': 'Smart Meters',
+  'condition_monitoring': 'Condition Monitoring',
   'scada': 'SCADA',
   'plc': 'PLC',
-  'sensors_monitoring': 'Sensors',
-  'iot_sensors': 'Sensors',
-  'condition_monitoring': 'Sensors',
-  'environmental_sensors': 'Sensors',
-  'safety_sensors': 'Sensors',
-  'historians': 'Historian',
-  'platforms_historians': 'Historian',
-  'inventory_warehouse': 'Inventory/WMS',
-  'workflow_itsm': 'Workflow/ITSM/iPaaS',
+  'dcs': 'DCS',
+  'mes': 'MES',
+  'hmi': 'HMI',
   'legacy_cmms': 'Legacy CMMS/EAM',
   'asset_tracking': 'Asset Tracking',
-  'construction': 'Construction',
-  'automation_scada': 'SCADA',
-  'dataops_integration': 'DataOps', // NEW: DataOps category
-  'other_systems': 'Other'
+  'inventory_warehouse': 'Inventory/Warehouse',
+  'workflow_itsm': 'Workflow/ITSM/iPaaS',
+  'construction_platforms': 'Construction Platforms',
+  'consulting_sis': 'Consulting & System Integrators',
+  'warehouse_lakehouse': 'Data Warehouse / Lakehouse',
+  'historians': 'Historians / Time-Series',
+  'streaming': 'Streaming & Eventing',
+  'bi': 'BI / Visualization',
+  'etl': 'ETL/ELT & Data Integration',
+  'governance': 'Data Governance / Catalog',
+  'dataops': 'DataOps/Integration Platforms',
+  'connectivity_edge': 'Connectivity & Edge'
 };
 
 // ISA-95 Hierarchy ordering (lower = higher level)

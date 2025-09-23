@@ -18,7 +18,7 @@ export interface IntegrationDetail {
 }
 
 export interface SensorIntegration extends IntegrationDetail {
-  category: 'IoT Sensors' | 'Smart Meters' | 'Condition Monitoring' | 'Environmental Sensors' | 'Safety Sensors' | 'Platforms/Historians';
+  category: 'Sensors' | 'IoT Sensors' | 'Smart Meters' | 'Condition Monitoring' | 'Environmental Sensors' | 'Safety Sensors' | 'Platforms/Historians';
 }
 
 export interface AutomationIntegration extends IntegrationDetail {

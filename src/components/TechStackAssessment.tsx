@@ -90,11 +90,9 @@ const TECH_OPTIONS = {
     { id: "other_erp", name: "Other ERP", description: "Custom or other ERP systems" },
   ],
   sensors: [
-    { id: "iot_sensors", name: "IoT Sensors", description: "Temperature, pressure, vibration sensors" },
+    { id: "sensors", name: "General Sensors", description: "Temperature, pressure, vibration, environmental, and safety sensors" },
     { id: "smart_meters", name: "Smart Meters", description: "Energy and utility monitoring" },
     { id: "condition_monitoring", name: "Condition Monitoring", description: "Predictive maintenance sensors" },
-    { id: "environmental", name: "Environmental Sensors", description: "Air quality, humidity monitoring" },
-    { id: "safety_sensors", name: "Safety Sensors", description: "Gas detection, motion sensors" },
   ],
   automation: [
     { 

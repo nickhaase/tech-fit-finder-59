@@ -1,10 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AssessmentData } from "@/types/assessment";
 import { Company, Assessment, AssessmentResult } from "@/types/database";
+import { migrateAssessmentData, needsCategoryMigration } from '@/utils/categoryMigration';
 
 export class AssessmentService {
   static async saveAssessment(assessmentData: AssessmentData, companyName?: string): Promise<{ uniqueUrl: string; assessmentId: string }> {
     try {
+      // Migrate assessment data if needed for backward compatibility
+      let migratedData = assessmentData;
+      if (needsCategoryMigration(assessmentData)) {
+        console.log('🔄 Migrating assessment data for category compatibility...');
+        migratedData = migrateAssessmentData(assessmentData);
+      }
+      
       let companyId: string | undefined;
 
       // Create or get company if provided
@@ -23,8 +31,8 @@ export class AssessmentService {
             .from('companies')
             .insert({
               name: companyName,
-              industry: assessmentData.company.industry,
-              size: assessmentData.company.size
+              industry: migratedData.company.industry,
+              size: migratedData.company.size
             })
             .select('id')
             .single();
@@ -37,12 +45,12 @@ export class AssessmentService {
         }
       }
 
-      // Save assessment
+      // Save assessment with migrated data
       const { data: assessment, error: assessmentError } = await supabase
         .from('assessments')
         .insert({
           company_id: companyId,
-          assessment_data: assessmentData as any
+          assessment_data: migratedData as any
         })
         .select('unique_url, id')
         .single();
