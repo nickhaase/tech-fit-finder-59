@@ -134,6 +134,116 @@ const FLOW_RULES: Record<Node['category'], {
       { module: 'assets', dataType: 'Asset Health Score', color: 'flow-warning' },
       { module: 'work-orders', dataType: 'Parts/ETA Intelligence', color: 'flow-secondary' }
     ]
+  },
+  'DCS': {
+    inbound: [
+      { module: 'work-orders', dataType: 'Process Parameters', color: 'flow-primary' },
+      { module: 'analytics', dataType: 'Control Data', color: 'flow-secondary' }
+    ],
+    outbound: [
+      { module: 'maintenance', dataType: 'Control Schedules', color: 'flow-warning' }
+    ]
+  },
+  'HMI': {
+    inbound: [
+      { module: 'work-orders', dataType: 'Operator Instructions', color: 'flow-primary' }
+    ],
+    outbound: [
+      { module: 'work-orders', dataType: 'Operator Actions', color: 'flow-primary' }
+    ]
+  },
+  'Smart Meters': {
+    inbound: [
+      { module: 'analytics', dataType: 'Usage Data', color: 'flow-secondary' }
+    ],
+    outbound: []
+  },
+  'Condition Monitoring': {
+    inbound: [
+      { module: 'assets', dataType: 'Vibration Data', color: 'flow-warning' },
+      { module: 'analytics', dataType: 'Health Metrics', color: 'flow-secondary' }
+    ],
+    outbound: []
+  },
+  'Historians / Time-Series': {
+    inbound: [
+      { module: 'analytics', dataType: 'Time-Series Data', color: 'flow-secondary' }
+    ],
+    outbound: []
+  },
+  'Inventory/Warehouse': {
+    inbound: [
+      { module: 'assets', dataType: 'Inventory Levels', color: 'flow-secondary' },
+      { module: 'work-orders', dataType: 'Parts Receipts', color: 'flow-primary' }
+    ],
+    outbound: [
+      { module: 'work-orders', dataType: 'Parts Reservations', color: 'flow-primary' }
+    ]
+  },
+  'Construction Platforms': {
+    inbound: [
+      { module: 'work-orders', dataType: 'Project Data', color: 'flow-secondary' }
+    ],
+    outbound: [
+      { module: 'work-orders', dataType: 'Progress Updates', color: 'flow-primary' }
+    ]
+  },
+  'Consulting & System Integrators': {
+    inbound: [],
+    outbound: [
+      { module: 'work-orders', dataType: 'Integration Data', color: 'flow-secondary' }
+    ]
+  },
+  'Data Warehouse / Lakehouse': {
+    inbound: [
+      { module: 'analytics', dataType: 'Aggregated Data', color: 'flow-secondary' }
+    ],
+    outbound: []
+  },
+  'Streaming & Eventing': {
+    inbound: [
+      { module: 'work-orders', dataType: 'Event Streams', color: 'flow-primary' }
+    ],
+    outbound: [
+      { module: 'work-orders', dataType: 'Real-time Events', color: 'flow-warning' }
+    ]
+  },
+  'BI / Visualization': {
+    inbound: [
+      { module: 'analytics', dataType: 'Report Data', color: 'flow-secondary' }
+    ],
+    outbound: []
+  },
+  'ETL/ELT & Data Integration': {
+    inbound: [
+      { module: 'analytics', dataType: 'Raw Data', color: 'flow-secondary' }
+    ],
+    outbound: [
+      { module: 'analytics', dataType: 'Processed Data', color: 'flow-primary' }
+    ]
+  },
+  'Data Governance / Catalog': {
+    inbound: [
+      { module: 'analytics', dataType: 'Metadata', color: 'flow-secondary' }
+    ],
+    outbound: []
+  },
+  'DataOps/Integration Platforms': {
+    inbound: [
+      { module: 'analytics', dataType: 'Model Inputs', color: 'flow-secondary' },
+      { module: 'work-orders', dataType: 'Historical Data', color: 'flow-primary' }
+    ],
+    outbound: [
+      { module: 'work-orders', dataType: 'AI Recommendations', color: 'flow-primary' }
+    ]
+  },
+  'Connectivity & Edge': {
+    inbound: [
+      { module: 'assets', dataType: 'Edge Data', color: 'flow-secondary' }
+    ],
+    outbound: [
+      { module: 'assets', dataType: 'Edge Commands', color: 'flow-primary' }
+    ]
   }
 };
 
